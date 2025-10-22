@@ -1,23 +1,26 @@
-import { IsInt, IsOptional, IsString, IsEmail } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsEmail, MinLength, ValidateIf } from 'class-validator';
+import { Match } from '../../common/validators/match.decorator';
 
 export class CreateUserDto {
-  // Required because `user_id` has no autoincrement in Prisma schema
-  @IsInt()
-  user_id!: number;
-
-  @IsOptional()
-  @IsString()
-  username?: string | null;
-
-  @IsOptional()
   @IsEmail()
-  email?: string | null;
+  email!: string;
 
-  @IsOptional()
   @IsString()
-  password?: string | null;
+  name!: string;
+
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @IsString()
+  @MinLength(6)
+  @Match('password', { message: 'confirmPassword must match password' })
+  confirmPassword!: string;
+
+  @IsInt()
+  role_id!: number;
 
   @IsOptional()
   @IsInt()
-  role_id?: number | null;
+  company_id?: number | null;
 }

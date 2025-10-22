@@ -8,13 +8,11 @@ export class SkillService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateSkillDto) {
-    const data: any = {
-      skillid: dto.skill_id,
-      name: dto.name ?? undefined,
-      description: dto.description ?? undefined,
-      level: dto.level ?? undefined,
-    };
-    return this.prisma.skill.create({ data });
+    return this.prisma.skill.create({
+      data: {
+        name: dto.name,
+      },
+    });
   }
 
   async findAll() {
@@ -22,7 +20,9 @@ export class SkillService {
   }
 
   async findOne(skill_id: number) {
-    const skill = await this.prisma.skill.findUnique({ where: { skillid: skill_id } });
+    const skill = await this.prisma.skill.findUnique({ 
+      where: { skill_id } 
+    });
     if (!skill) throw new NotFoundException(`Skill ${skill_id} not found`);
     return skill;
   }
@@ -30,18 +30,24 @@ export class SkillService {
   async findAllWithRelations() {
     return this.prisma.skill.findMany({
       include: {
-        job_skill: { include: { job: true } },
-        task_skill: { include: { task: true } },
+        jobSkills: {
+          include: { 
+            job: true 
+          } 
+        },
       },
     });
   }
 
   async findOneWithRelations(skill_id: number) {
     const skill = await this.prisma.skill.findUnique({
-      where: { skillid: skill_id },
+      where: { skill_id },
       include: {
-        job_skill: { include: { job: true } },
-        task_skill: { include: { task: true } },
+        jobSkills: {
+          include: { 
+            job: true 
+          } 
+        },
       },
     });
     if (!skill) throw new NotFoundException(`Skill ${skill_id} not found`);
@@ -49,13 +55,13 @@ export class SkillService {
   }
 
   async update(skill_id: number, dto: UpdateSkillDto) {
-    const data: any = {
-      name: dto.name ?? undefined,
-      description: dto.description ?? undefined,
-      level: dto.level ?? undefined,
-    };
     try {
-      return await this.prisma.skill.update({ where: { skillid: skill_id }, data });
+      return await this.prisma.skill.update({
+        where: { skill_id },
+        data: {
+          name: dto.name,
+        },
+      });
     } catch (e: any) {
       if (e?.code === 'P2025') throw new NotFoundException(`Skill ${skill_id} not found`);
       throw e;
@@ -64,7 +70,9 @@ export class SkillService {
 
   async remove(skill_id: number) {
     try {
-      return await this.prisma.skill.delete({ where: { skillid: skill_id } });
+      return await this.prisma.skill.delete({ 
+        where: { skill_id } 
+      });
     } catch (e: any) {
       if (e?.code === 'P2025') throw new NotFoundException(`Skill ${skill_id} not found`);
       throw e;

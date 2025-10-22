@@ -1,15 +1,12 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class CreateRoleDto {
-  // Required because `role_id` has no autoincrement in Prisma schema
-  @IsInt()
-  role_id!: number;
-
-  @IsOptional()
   @IsString()
-  name?: string | null;
+  @IsNotEmpty()
+  name: string;
 
-  @IsOptional()
   @IsString()
-  description?: string | null;
+  @IsOptional()
+  @MaxLength(500)
+  description?: string;
 }

@@ -8,10 +8,9 @@ export class RoleService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateRoleDto) {
-    const data: any = {
-      role_id: dto.role_id,
-      name: dto.name ?? undefined,
-      description: dto.description ?? undefined,
+    const data = {
+      name: dto.name,
+      description: dto.description,
     };
     return this.prisma.role.create({ data });
   }
@@ -29,7 +28,7 @@ export class RoleService {
   async findAllWithRelations() {
     return this.prisma.role.findMany({
       include: {
-        user: true,
+        users: true,
       },
     });
   }
@@ -38,7 +37,7 @@ export class RoleService {
     const role = await this.prisma.role.findUnique({
       where: { role_id },
       include: {
-        user: true,
+        users: true,
       },
     });
     if (!role) throw new NotFoundException(`Role ${role_id} not found`);
@@ -47,9 +46,14 @@ export class RoleService {
 
   async update(role_id: number, dto: UpdateRoleDto) {
     const data: any = {
-      name: dto.name ?? undefined,
-      description: dto.description ?? undefined,
+      name: dto.name,
     };
+    
+    // Only include description if it's provided in the DTO
+    if (dto.description !== undefined) {
+      data.description = dto.description;
+    }
+    
     try {
       return await this.prisma.role.update({ where: { role_id }, data });
     } catch (e: any) {

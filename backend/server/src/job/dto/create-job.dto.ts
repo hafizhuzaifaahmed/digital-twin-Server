@@ -1,19 +1,57 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, ArrayUnique, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateJobDto {
-  // Required because `job_id` has no autoincrement in Prisma schema
-  @IsInt()
-  job_id!: number;
+  @IsString()
+  @IsNotEmpty()
+  jobCode: string;
 
-  @IsOptional()
-  @IsInt()
-  function_id?: number | null;
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description: string;
 
   @IsOptional()
   @IsString()
-  name?: string | null;
+  overview?: string;
+
+  @IsNumber()
+  hourlyRate: number;
+
+  @IsInt()
+  maxHoursPerDay: number;
+
+  @IsInt()
+  function_id: number;
+
+  @IsInt()
+  company_id: number;
+
+  @IsString()
+  @IsNotEmpty()
+  jobLevel: string; // e.g., "ADVANCED"
+
+  // M:N relations
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  task_ids?: number[];
 
   @IsOptional()
-  @IsInt()
-  levelid?: number | null;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => JobSkillInput)
+  skills?: JobSkillInput[];
+}
+
+export class JobSkillInput {
+  @IsString()
+  name: string; // skill name
+
+  @IsString()
+  level: string; // e.g., "PROFICIENT"
 }

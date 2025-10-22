@@ -1,27 +1,31 @@
-import { IsInt, IsOptional, IsString, IsEmail } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, IsInt, IsBoolean } from 'class-validator';
 
 export class CreatePeopleDto {
-  // Required because `peopleid` has no autoincrement in Prisma schema
-  @IsInt()
-  peopleid!: number;
-
-  @IsOptional()
   @IsString()
-  name?: string | null;
+  @IsNotEmpty()
+  name: string;
 
+  @IsString()
+  @IsNotEmpty()
+  surname: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  company_id: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  job_id: number;
+
+  @IsBoolean()
   @IsOptional()
+  is_manager?: boolean = false;
+
   @IsEmail()
-  email?: string | null;
+  @IsNotEmpty()
+  email: string;
 
-  @IsOptional()
   @IsString()
-  phone?: string | null;
-
   @IsOptional()
-  @IsInt()
-  companyid?: number | null;
-
-  @IsOptional()
-  @IsInt()
-  jobid?: number | null;
+  phone?: string;
 }

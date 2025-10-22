@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -8,11 +8,10 @@ export class CompanyService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateCompanyDto) {
-    // Map nulls to undefined for Prisma optional fields
-    const data: any = {
-      company_id: dto.company_id, // required by schema (no autoincrement)
-      name: dto.name ?? undefined,
-      created_by: dto.created_by ?? undefined,
+    const data = {
+      companyCode: dto.companyCode,
+      name: dto.name,
+      created_by: dto.created_by,
     };
     return this.prisma.company.create({ data });
   }
@@ -30,32 +29,16 @@ export class CompanyService {
   async findAllWithRelations() {
     return this.prisma.company.findMany({
       include: {
-        user: true,
         people: true,
-        building: {
+        buildings: {
           include: {
             floor: {
               include: {
                 room: {
-                  include: { table: true },
-                },
-              },
-            },
-            Renamedfunction: {
-              include: {
-                job: {
                   include: {
-                    job_level: true,
-                    job_skill: { include: { skill: true } },
-                    job_task: { include: { task: { include: { task_skill: { include: { skill: true } } } } } },
-                    people: true,
+                    table: true,
                   },
                 },
-              },
-            },
-            process: {
-              include: {
-                process_task: { include: { task: true } },
               },
             },
           },
@@ -68,24 +51,18 @@ export class CompanyService {
     const company = await this.prisma.company.findUnique({
       where: { company_id },
       include: {
-        user: true,
         people: true,
-        building: {
+        buildings: {
           include: {
-            floor: { include: { room: { include: { table: true } } } },
-            Renamedfunction: {
+            floor: {
               include: {
-                job: {
+                room: {
                   include: {
-                    job_level: true,
-                    job_skill: { include: { skill: true } },
-                    job_task: { include: { task: true } },
-                    people: true,
+                    table: true,
                   },
                 },
               },
             },
-            process: { include: { process_task: { include: { task: true } } } },
           },
         },
       },
@@ -96,6 +73,7 @@ export class CompanyService {
 
   async update(company_id: number, dto: UpdateCompanyDto) {
     const data: any = {
+      companyCode: dto.companyCode ?? undefined,
       name: dto.name ?? undefined,
       created_by: dto.created_by ?? undefined,
     };
@@ -103,6 +81,7 @@ export class CompanyService {
       return await this.prisma.company.update({ where: { company_id }, data });
     } catch (e: any) {
       if (e?.code === 'P2025') throw new NotFoundException(`Company ${company_id} not found`);
+      if (e?.code === 'P2002') throw new ConflictException('companyCode already exists');
       throw e;
     }
   }

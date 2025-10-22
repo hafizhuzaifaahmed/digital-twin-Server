@@ -1,19 +1,26 @@
-import { IsInt, IsOptional } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateRoomDto {
-  // Required because `room_id` has no autoincrement in Prisma schema
+  @IsString()
+  roomCode: string;
+
+  @IsString()
+  name: string;
+
   @IsInt()
-  room_id!: number;
+  floor_id: number;
 
   @IsOptional()
   @IsInt()
-  floor_id?: number | null;
+  @Min(1)
+  row?: number;
 
   @IsOptional()
   @IsInt()
-  cell_row?: number | null;
+  @Min(1)
+  column?: number;
 
   @IsOptional()
-  @IsInt()
-  cell_column?: number | null;
+  @IsEnum(['EMPTY', 'ELEVATOR', 'STAIRS'])
+  cellType?: 'EMPTY' | 'ELEVATOR' | 'STAIRS';
 }

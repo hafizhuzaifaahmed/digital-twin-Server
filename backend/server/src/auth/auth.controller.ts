@@ -17,7 +17,7 @@ class LoginDto {
 
 class RegisterDto {
   @IsString()
-  username: string;
+  name: string;
 
   @IsEmail()
   email: string;

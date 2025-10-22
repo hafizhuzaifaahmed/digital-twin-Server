@@ -1,15 +1,14 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateCompanyDto {
-  // Required because `company_id` has no autoincrement in Prisma schema
-  @IsInt()
-  company_id!: number;
-
-  @IsOptional()
   @IsString()
-  name?: string | null;
+  @IsNotEmpty()
+  companyCode!: string;
 
-  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
   @IsInt()
-  created_by?: number | null;
+  created_by!: number;
 }

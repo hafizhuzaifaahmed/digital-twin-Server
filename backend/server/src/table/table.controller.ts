@@ -1,11 +1,15 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
-import { TableService } from './table.service';
+import { TableService, TableAssignmentService } from './table.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { UpdateTableDto } from './dto/update-table.dto';
+import { AssignJobDto } from './dto/assign-job.dto';
 
 @Controller('table')
 export class TableController {
-  constructor(private readonly tableService: TableService) {}
+  constructor(
+    private readonly tableService: TableService,
+    private readonly tableAssignmentService: TableAssignmentService,
+  ) {}
 
   @Post()
   create(@Body() dto: CreateTableDto) {
@@ -30,6 +34,24 @@ export class TableController {
   @Get(':id/with-relations')
   findOneWithRelations(@Param('id', ParseIntPipe) id: number) {
     return this.tableService.findOneWithRelations(id);
+  }
+
+  @Get(':id/jobs')
+  listJobs(@Param('id', ParseIntPipe) id: number) {
+    return this.tableAssignmentService.listJobs(id);
+  }
+
+  @Post(':id/jobs')
+  assignJob(@Param('id', ParseIntPipe) id: number, @Body() dto: AssignJobDto) {
+    return this.tableAssignmentService.assignJob(id, dto);
+  }
+
+  @Delete(':id/jobs/:jobId')
+  unassignJob(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('jobId', ParseIntPipe) jobId: number,
+  ) {
+    return this.tableAssignmentService.unassignJob(id, jobId);
   }
 
   @Patch(':id')

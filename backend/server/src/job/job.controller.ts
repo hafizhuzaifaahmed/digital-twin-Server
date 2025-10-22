@@ -47,8 +47,9 @@ export class JobController {
   connectSkill(
     @Param('id', ParseIntPipe) id: number,
     @Body('skillid', ParseIntPipe) skillid: number,
+    @Body('skill_level_id', ParseIntPipe) skill_level_id: number,
   ) {
-    return this.jobService.connectSkill(id, skillid);
+    return this.jobService.connectSkill(id, skillid, skill_level_id);
   }
 
   @Delete(':id/skills/:skillid')

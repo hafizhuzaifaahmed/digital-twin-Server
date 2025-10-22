@@ -8,7 +8,7 @@ import { BuildingModule } from './building/building.module';
 import { FloorModule } from './floor/floor.module';
 import { RoomModule } from './room/room.module';
 import { TableModule } from './table/table.module';
-import { RenamedfunctionModule } from './renamedfunction/renamedfunction.module';
+import { FunctionModule } from './function/function.module';
 import { JobModule } from './job/job.module';
 import { ProcessModule } from './process/process.module';
 import { TaskModule } from './task/task.module';
@@ -28,7 +28,7 @@ import { RolesGuard } from './auth/roles.guard';
     FloorModule,
     RoomModule,
     TableModule,
-    RenamedfunctionModule,
+    FunctionModule,
     JobModule,
     ProcessModule,
     TaskModule,

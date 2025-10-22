@@ -1,19 +1,15 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
+import { CreateProcessDto } from './create-process.dto';
 
-export class UpdateProcessDto {
-  @IsOptional()
-  @IsInt()
-  building_id?: number | null;
-
+export class UpdateProcessDto extends PartialType(CreateProcessDto) {
+  @ApiProperty({
+    description: 'Optimistic concurrency guard. Pass the last known updated_at ISO string of the process to avoid overwriting concurrent changes.',
+    required: false,
+    example: '2025-09-18T08:00:00.000Z',
+  })
   @IsOptional()
   @IsString()
-  name?: string | null;
-
-  @IsOptional()
-  @IsString()
-  description?: string | null;
-
-  @IsOptional()
-  @IsInt()
-  duration?: number | null;
+  if_match_updated_at?: string;
 }

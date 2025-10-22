@@ -1,15 +1,15 @@
-import { IsInt, IsOptional } from 'class-validator';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class UpdateFloorDto {
   @IsOptional()
+  @IsString()
+  floorCode?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
   @IsInt()
   building_id?: number | null;
-
-  @IsOptional()
-  @IsInt()
-  rows?: number | null;
-
-  @IsOptional()
-  @IsInt()
-  columns?: number | null;
 }

@@ -7,201 +7,342 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model building {
-  building_id     Int               @id
-  name            String?           @db.VarChar(45)
-  company_id      Int?
-  company         company?          @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "comapny_id")
-  floor           floor[]
-  Renamedfunction Renamedfunction[]
-  process         process[]
+/// ///////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////
+model user {
+  user_id          Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  name             String
+  role_id          Int
+  company_id       Int?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  createdCompanies company[] @relation("CompanyCreator")
+  company          company?  @relation("UserCompany", fields: [company_id], references: [company_id])
+  role             role      @relation(fields: [role_id], references: [role_id])
 
-  @@index([company_id], map: "comapny_id_idx")
+  @@index([company_id], map: "user_company_id_fkey")
+  @@index([role_id], map: "user_role_id_fkey")
 }
 
-model company {
-  company_id Int        @id
-  name       String?    @db.VarChar(45)
-  created_by Int?
-  building   building[]
-  user       user?      @relation(fields: [created_by], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "created_by")
-  people     people[]
+model role {
+  role_id     Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  users       user[]
+}
 
-  @@index([created_by], map: "created_by_idx")
+/// ///////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////
+model company {
+  company_id  Int        @id @default(autoincrement())
+  companyCode String     @unique
+  name        String
+  created_by  Int
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  Function    Function[]
+  buildings   building[]
+  creator     user       @relation("CompanyCreator", fields: [created_by], references: [user_id])
+  job         job[]
+  people      people[]
+  processes   process[]
+  task        task[]
+  employees   user[]     @relation("UserCompany")
+
+  @@index([created_by], map: "company_created_by_fkey")
+}
+
+model people {
+  people_id      Int      @id @default(autoincrement())
+  company_id     Int
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  is_manager     Boolean  @default(false)
+  job_id         Int
+  people_email   String   @unique
+  people_name    String
+  people_phone   String?
+  people_surname String
+  company        company  @relation(fields: [company_id], references: [company_id])
+  job            job      @relation(fields: [job_id], references: [job_id])
+
+  @@index([company_id], map: "people_company_id_fkey")
+  @@index([job_id], map: "people_job_id_fkey")
+}
+
+model building {
+  building_id   Int             @id @default(autoincrement())
+  buildingCode  String          @unique
+  name          String
+  company_id    Int
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+  city          String?
+  columns       Int             @default(1)
+  country       String?
+  rows          Int             @default(1)
+  company       company         @relation(fields: [company_id], references: [company_id])
+  building_cell building_cell[]
+  floor         floor[]
+
+  @@index([company_id], map: "building_company_id_fkey")
+}
+
+model building_cell {
+  id          Int      @id @default(autoincrement())
+  building_id Int
+  row         Int
+  column      Int
+  type        CellType @default(EMPTY)
+  building    building @relation(fields: [building_id], references: [building_id], onDelete: Cascade)
+
+  @@unique([building_id, row, column])
 }
 
 model floor {
-  floor_id    Int       @id
-  building_id Int?
-  rows        Int?
-  columns     Int?
-  building    building? @relation(fields: [building_id], references: [building_id], onDelete: Restrict, onUpdate: Restrict, map: "floor_building_id")
+  floor_id    Int      @id @default(autoincrement())
+  floorCode   String   @unique
+  name        String
+  building_id Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  building    building @relation(fields: [building_id], references: [building_id], onDelete: Cascade)
   room        room[]
 
-  @@index([building_id], map: "building_id_idx")
+  @@index([building_id], map: "floor_building_id_fkey")
 }
 
-/// This model has been renamed to 'Renamedfunction' during introspection, because the original name 'function' is reserved.
-model Renamedfunction {
-  function_id Int       @id
-  building_id Int?
-  name        String?   @db.VarChar(45)
-  building    building? @relation(fields: [building_id], references: [building_id], onDelete: Restrict, onUpdate: Restrict, map: "function_building_id")
-  job         job[]
+model room {
+  room_id    Int      @id @default(autoincrement())
+  roomCode   String   @unique
+  name       String
+  floor_id   Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  cellType   CellType @default(EMPTY)
+  column     Int
+  row        Int
+  floor      floor    @relation(fields: [floor_id], references: [floor_id], onDelete: Cascade)
+  table      table[]
 
-  @@index([building_id], map: "building_id_idx")
-  @@map("function")
+  @@unique([floor_id, row, column])
+}
+
+model table {
+  table_id    Int              @id @default(autoincrement())
+  tableCode   String
+  name        String
+  room_id     Int
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  capacity    Int              @default(1)
+  orientation TableOrientation @default(HORIZONTAL)
+  room        room             @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  table_job   table_job[]
+
+  @@unique([room_id, tableCode])
+}
+
+/// ///////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////
+model process {
+  process_id                         Int            @id @default(autoincrement())
+  company_id                         Int
+  created_at                         DateTime       @default(now())
+  updated_at                         DateTime       @updatedAt
+  capacity_requirement_minutes       Int?
+  parent_process_id                  Int?
+  parent_task_id                     Int?
+  process_code                       String         @unique
+  process_name                       String
+  process_overview                   String         @db.Text
+  company                            company        @relation(fields: [company_id], references: [company_id])
+  process                            process?       @relation("processToprocess", fields: [parent_process_id], references: [process_id])
+  other_process                      process[]      @relation("processToprocess")
+  task_process_parent_task_idTotask  task?          @relation("process_parent_task_idTotask", fields: [parent_task_id], references: [task_id])
+  process_task                       process_task[]
+  task_task_task_process_idToprocess task[]         @relation("task_task_process_idToprocess")
+
+  @@index([company_id], map: "process_company_id_fkey")
+  @@index([parent_process_id], map: "process_parent_process_id_fkey")
+  @@index([parent_task_id], map: "process_parent_task_id_fkey")
+}
+
+model task {
+  task_id                               Int            @id @default(autoincrement())
+  created_at                            DateTime       @default(now())
+  updated_at                            DateTime       @updatedAt
+  task_capacity_minutes                 Int
+  task_code                             String         @unique
+  task_company_id                       Int
+  task_name                             String
+  task_overview                         String         @db.Text
+  task_process_id                       Int?
+  jobTasks                              job_task[]
+  process_process_parent_task_idTotask  process[]      @relation("process_parent_task_idTotask")
+  process_task                          process_task[]
+  company                               company        @relation(fields: [task_company_id], references: [company_id])
+  process_task_task_process_idToprocess process?       @relation("task_task_process_idToprocess", fields: [task_process_id], references: [process_id])
+  task_skill                            task_skill[]
+
+  @@index([task_company_id], map: "task_task_company_id_fkey")
+  @@index([task_process_id], map: "task_task_process_id_fkey")
 }
 
 model job {
-  job_id          Int              @id
-  function_id     Int?
-  name            String?          @db.VarChar(45)
-  levelid         Int?
-  Renamedfunction Renamedfunction? @relation(fields: [function_id], references: [function_id], onDelete: Restrict, onUpdate: Restrict, map: "function_id")
-  job_level       job_level?       @relation(fields: [levelid], references: [levelid], onDelete: Restrict, onUpdate: Restrict, map: "joblevelid")
-  job_skill       job_skill[]
-  job_task        job_task[]
-  people          people[]
+  job_id         Int         @id @default(autoincrement())
+  jobCode        String      @unique
+  job_level_id   Int
+  company_id     Int
+  createdAt      DateTime    @default(now())
+  hourlyRate     Float
+  maxHoursPerDay Float
+  updatedAt      DateTime
+  description    String      @db.Text
+  function_id    Int
+  name           String
+  overview       String?     @db.Text
+  company        company     @relation(fields: [company_id], references: [company_id])
+  Function       Function    @relation(fields: [function_id], references: [function_id])
+  job_level      job_level   @relation(fields: [job_level_id], references: [id])
+  jobSkills      job_skill[]
+  jobTasks       job_task[]
+  people         people[]
+  table_job      table_job[]
 
-  @@index([function_id], map: "function_id_idx")
-  @@index([levelid], map: "joblevelid_idx")
+  @@index([job_level_id], map: "job_job_level_id_fkey")
+  @@index([company_id], map: "job_company_id_fkey")
+  @@index([function_id], map: "job_function_id_fkey")
 }
 
 model job_level {
-  levelid     Int     @id
-  name        String? @db.VarChar(45)
-  description String? @db.VarChar(100)
-  job         job[]
+  description String?
+  id          Int                  @id @default(autoincrement())
+  level_name  job_level_level_name @unique
+  level_rank  Int?                 @unique
+  jobs        job[]
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model job_skill {
-  jobid   Int
-  skillid Int
-  job     job   @relation(fields: [jobid], references: [job_id], onUpdate: Restrict, map: "jobid")
-  skill   skill @relation(fields: [skillid], references: [skillid], onUpdate: Restrict, map: "skillid")
+/// ///////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////
+model skill {
+  name        String       @unique
+  description String?
+  skill_id    Int          @id @default(autoincrement())
+  jobSkills   job_skill[]
+  task_skill  task_skill[]
+}
 
-  @@id([jobid, skillid])
-  @@index([jobid], map: "jobid_idx")
-  @@index([skillid], map: "skillid_idx")
+model job_skill {
+  job_id         Int
+  skill_id       Int
+  skill_level_id Int
+  job            job         @relation(fields: [job_id], references: [job_id])
+  skill          skill       @relation(fields: [skill_id], references: [skill_id])
+  skill_level    skill_level @relation(fields: [skill_level_id], references: [id])
+
+  @@id([job_id, skill_id])
+  @@index([skill_id], map: "job_skill_skill_id_fkey")
+  @@index([skill_level_id], map: "job_skill_skill_level_id_fkey")
 }
 
 model job_task {
   job_id  Int
   task_id Int
-  job     job  @relation(fields: [job_id], references: [job_id], onUpdate: Restrict, map: "fk_job_task_job")
-  task    task @relation(fields: [task_id], references: [task_id], onUpdate: Restrict, map: "fk_job_task_task")
+  job     job  @relation(fields: [job_id], references: [job_id])
+  task    task @relation(fields: [task_id], references: [task_id])
 
   @@id([job_id, task_id])
-  @@index([job_id], map: "job_id_idx")
-  @@index([task_id], map: "task_id_idx")
+  @@index([task_id], map: "job_task_task_id_fkey")
 }
 
-model people {
-  peopleid  Int      @id
-  name      String?  @db.VarChar(45)
-  email     String?  @db.VarChar(45)
-  phone     String?  @db.VarChar(45)
-  companyid Int?
-  jobid     Int?
-  company   company? @relation(fields: [companyid], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "peoplecompanyid")
-  job       job?     @relation(fields: [jobid], references: [job_id], onDelete: Restrict, onUpdate: Restrict, map: "peoplejobid")
-
-  @@index([companyid], map: "peoplecompanyid_idx")
-  @@index([jobid], map: "peoplejobid_idx")
-}
-
-model process {
-  process_id   Int            @id
-  building_id  Int?
-  name         String?        @db.VarChar(45)
-  description  String?        @db.VarChar(1000)
-  duration     Int?
-  building     building?      @relation(fields: [building_id], references: [building_id], onDelete: Restrict, onUpdate: Restrict, map: "process_building_id")
-  process_task process_task[]
-
-  @@index([building_id])
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model process_task {
   process_id Int
   task_id    Int
-  order      Int?
-  process    process @relation(fields: [process_id], references: [process_id], onUpdate: Restrict, map: "process_id")
-  task       task    @relation(fields: [task_id], references: [task_id], onUpdate: Restrict, map: "task_id")
+  order      Int
+  process    process @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
+  task       task    @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
 
   @@id([process_id, task_id])
-  @@index([process_id], map: "process_id_idx")
-  @@index([task_id], map: "task_id_idx")
+  @@index([task_id], map: "process_task_task_id_fkey")
 }
 
-model role {
-  role_id     Int     @id
-  name        String? @db.VarChar(45)
-  description String? @db.VarChar(100)
-  user        user[]
+model skill_level {
+  id          Int                    @id @default(autoincrement())
+  level_name  skill_level_level_name
+  description String?
+  level_rank  Int?                   @unique
+  job_skill   job_skill[]
+  task_skill  task_skill[]
 }
 
-model room {
-  room_id     Int     @id
-  floor_id    Int?
-  cell_row    Int?
-  cell_column Int?
-  floor       floor?  @relation(fields: [floor_id], references: [floor_id], onDelete: Restrict, onUpdate: Restrict, map: "floor_id")
-  table       table[]
+model table_job {
+  table_id    Int
+  job_id      Int
+  assigned_at DateTime @default(now())
+  job         job      @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+  table       table    @relation(fields: [table_id], references: [table_id], onDelete: Cascade)
 
-  @@index([floor_id], map: "floor_id_idx")
+  @@id([table_id, job_id])
+  @@index([job_id], map: "table_job_job_id_fkey")
 }
 
-model skill {
-  skillid    Int          @id
-  name       String?      @db.VarChar(45)
-  job_skill  job_skill[]
-  task_skill task_skill[]
-}
-
-model table {
-  table_id  Int     @id
-  room_id   Int?
-  posittion String? @db.VarChar(45)
-  room      room?   @relation(fields: [room_id], references: [room_id], onDelete: Restrict, onUpdate: Restrict, map: "room_id")
-
-  @@index([room_id], map: "room_id_idx")
-}
-
-model task {
-  task_id      Int            @id
-  name         String?        @db.VarChar(45)
-  description  String?        @db.VarChar(1000)
-  duration     Int?
-  minlevel     Int?
-  job_task     job_task[]
-  process_task process_task[]
-  task_skill   task_skill[]
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model task_skill {
-  taskid  Int
-  skillid Int
-  skill   skill @relation(fields: [skillid], references: [skillid], onUpdate: Restrict, map: "skillidmapping")
-  task    task  @relation(fields: [taskid], references: [task_id], onUpdate: Restrict, map: "taskidmapping")
+  task_skill_task_id  Int
+  task_skill_skill_id Int
+  task_skill_level_id Int
+  skill_name          String
+  skill_level         skill_level @relation(fields: [task_skill_level_id], references: [id])
+  skill               skill       @relation(fields: [task_skill_skill_id], references: [skill_id])
+  task                task        @relation(fields: [task_skill_task_id], references: [task_id])
 
-  @@id([taskid, skillid])
-  @@index([skillid], map: "skillid_idx")
-  @@index([taskid], map: "taskid_idx")
+  @@id([task_skill_task_id, task_skill_skill_id])
+  @@index([task_skill_level_id], map: "task_skill_task_skill_level_id_fkey")
+  @@index([task_skill_skill_id], map: "task_skill_task_skill_skill_id_fkey")
 }
 
-model user {
-  user_id  Int       @id
-  name     String?   @db.VarChar(45)
-  emai     String?   @db.VarChar(65)
-  password String?   @db.VarChar(100)
-  role_id  Int?
-  company  company[]
-  role     role?     @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "role_id")
+model Function {
+  function_id        Int        @id @default(autoincrement())
+  functionCode       String     @unique
+  name               String
+  company_id         Int
+  parent_function_id Int?
+  backgroundColor    String?
+  overview           String?    @db.Text
+  company            company    @relation(fields: [company_id], references: [company_id])
+  Function           Function?  @relation("FunctionToFunction", fields: [parent_function_id], references: [function_id])
+  other_Function     Function[] @relation("FunctionToFunction")
+  job                job[]
 
-  @@index([role_id], map: "role_id_idx")
+  @@index([company_id], map: "Function_company_id_fkey")
+  @@index([parent_function_id], map: "Function_parent_function_id_fkey")
+}
+
+enum CellType {
+  EMPTY
+  ELEVATOR
+  STAIRS
+}
+
+enum TableOrientation {
+  HORIZONTAL
+  VERTICAL
+}
+
+enum skill_level_level_name {
+  NOVICE
+  INTERMEDIATE
+  PROFICIENT
+  ADVANCED
+  EXPERT
+}
+
+enum job_level_level_name {
+  NOVICE
+  INTERMEDIATE
+  PROFICIENT
+  ADVANCED
+  EXPERT
 }

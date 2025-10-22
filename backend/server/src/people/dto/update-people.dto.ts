@@ -1,23 +1,29 @@
-import { IsInt, IsOptional, IsString, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsInt, IsBoolean } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreatePeopleDto } from './create-people.dto';
 
-export class UpdatePeopleDto {
+export class UpdatePeopleDto extends PartialType(CreatePeopleDto) {
   @IsOptional()
   @IsString()
-  name?: string | null;
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  surname?: string;
+
+  @IsOptional()
+  @IsInt()
+  job_id?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_manager?: boolean;
 
   @IsOptional()
   @IsEmail()
-  email?: string | null;
+  email?: string;
 
   @IsOptional()
   @IsString()
-  phone?: string | null;
-
-  @IsOptional()
-  @IsInt()
-  companyid?: number | null;
-
-  @IsOptional()
-  @IsInt()
-  jobid?: number | null;
+  phone?: string;
 }

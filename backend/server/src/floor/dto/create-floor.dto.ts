@@ -1,19 +1,14 @@
-import { IsInt, IsOptional } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateFloorDto {
-  // Required because `floor_id` has no autoincrement in Prisma schema
-  @IsInt()
-  floor_id!: number;
+  @IsString()
+  @IsNotEmpty()
+  floorCode!: string;
 
-  @IsOptional()
-  @IsInt()
-  building_id?: number | null;
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
 
-  @IsOptional()
   @IsInt()
-  rows?: number | null;
-
-  @IsOptional()
-  @IsInt()
-  columns?: number | null;
+  building_id!: number;
 }

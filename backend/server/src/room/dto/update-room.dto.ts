@@ -1,15 +1,29 @@
-import { IsInt, IsOptional } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdateRoomDto {
   @IsOptional()
-  @IsInt()
-  floor_id?: number | null;
+  @IsString()
+  roomCode?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
 
   @IsOptional()
   @IsInt()
-  cell_row?: number | null;
+  floor_id?: number;
 
   @IsOptional()
   @IsInt()
-  cell_column?: number | null;
+  @Min(1)
+  row?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  column?: number;
+
+  @IsOptional()
+  @IsEnum(['EMPTY', 'ELEVATOR', 'STAIRS'])
+  cellType?: 'EMPTY' | 'ELEVATOR' | 'STAIRS';
 }
