@@ -1,3 +1,9 @@
+// Company sheet data
+export interface CompanySheetRow {
+  'Company Code': string;
+  'Company Name': string;
+}
+
 // Function sheet data
 export interface FunctionSheetRow {
   'Function Name': string;
@@ -78,6 +84,7 @@ export interface PeopleJobSheetRow {
 }
 
 export interface ParsedExcelData {
+  companies: CompanySheetRow[];
   functions: FunctionSheetRow[];
   jobs: JobSheetRow[];
   tasks: TaskSheetRow[];

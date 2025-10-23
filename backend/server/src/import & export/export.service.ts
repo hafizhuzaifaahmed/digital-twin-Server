@@ -31,7 +31,8 @@ export class ExportService {
     const companyId = company.company_id;
 
     // Fetch all data
-    const [functions, jobs, tasks, processes, people, taskProcesses, jobTasks, functionJobs, peopleJobs] = await Promise.all([
+    const [companies, functions, jobs, tasks, processes, people, taskProcesses, jobTasks, functionJobs, peopleJobs] = await Promise.all([
+      this.fetchCompanies(companyId),
       this.fetchFunctions(companyId),
       this.fetchJobs(companyId),
       this.fetchTasks(companyId),
@@ -46,7 +47,8 @@ export class ExportService {
     // Create workbook
     const workbook = XLSX.utils.book_new();
 
-    // Add sheets in the same order as import
+    // Add sheets in the same order as import (Company first)
+    this.addSheet(workbook, 'Company', companies);
     this.addSheet(workbook, 'Function', functions);
     this.addSheet(workbook, 'Job', jobs);
     this.addSheet(workbook, 'Task', tasks);
@@ -64,6 +66,26 @@ export class ExportService {
     });
 
     return excelBuffer;
+  }
+
+  /**
+   * Fetch Companies
+   */
+  private async fetchCompanies(companyId: number): Promise<any[]> {
+    // For now, just return the current company
+    // You could fetch all companies if needed
+    const company = await this.prisma.company.findUnique({
+      where: { company_id: companyId },
+    });
+
+    if (!company) return [];
+
+    return [
+      {
+        'Company Code': company.companyCode,
+        'Company Name': company.name,
+      },
+    ];
   }
 
   /**

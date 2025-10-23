@@ -145,6 +145,7 @@ export class ImportController {
       missingSheets: validation.missingSheets,
       foundSheets: sheetNames,
       rowCounts: {
+        companies: parsedData.companies.length,
         functions: parsedData.functions.length,
         jobs: parsedData.jobs.length,
         tasks: parsedData.tasks.length,

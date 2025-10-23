@@ -19,6 +19,7 @@ export class ExcelParserService {
 
       // Initialize parsed data structure
       const parsedData: ParsedExcelData = {
+        companies: [],
         functions: [],
         jobs: [],
         tasks: [],
@@ -30,7 +31,8 @@ export class ExcelParserService {
         peopleJob: [],
       };
 
-      // Parse each sheet
+      // Parse each sheet (Company first)
+      parsedData.companies = this.parseSheet(workbook, 'Company');
       parsedData.functions = this.parseSheet(workbook, 'Function');
       parsedData.jobs = this.parseSheet(workbook, 'Job');
       parsedData.tasks = this.parseSheet(workbook, 'Task');
@@ -90,6 +92,7 @@ export class ExcelParserService {
         WTF: false // Don't throw on parse errors, continue parsing
       });
       const requiredSheets = [
+        'Company',
         'Function',
         'Job',
         'Task',

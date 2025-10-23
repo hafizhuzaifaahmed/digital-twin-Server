@@ -159,21 +159,28 @@ Invoke-WebRequest -Uri $url -Method GET -Headers $headers -OutFile $outputFile
 
 **Exported Excel Structure:**
 The exported file contains the following sheets in this order:
-1. **Function** - All functions for the company
-2. **Job** - All jobs for the company
-3. **Task** - All tasks for the company
-4. **Process** - All processes for the company
-5. **People** - All people for the company
-6. **Task-Process** - Task-Process relationships
-7. **Job-Task** - Job-Task relationships
-8. **Function-Job** - Function-Job relationships
-9. **people-job** - People-Job relationships
+1. **Company** - Company information
+2. **Function** - All functions for the company
+3. **Job** - All jobs for the company
+4. **Task** - All tasks for the company
+5. **Process** - All processes for the company
+6. **People** - All people for the company
+7. **Task-Process** - Task-Process relationships
+8. **Job-Task** - Job-Task relationships
+9. **Function-Job** - Function-Job relationships
+10. **people-job** - People-Job relationships
 
 ---
 
 ## Excel File Format
 
 ### Required Sheets
+
+#### Company Sheet
+| Column Name | Type | Description |
+|------------|------|-------------|
+| Company Code | String | Unique company code |
+| Company Name | String | Name of the company |
 
 #### Function Sheet
 | Column Name | Type | Description |
@@ -249,14 +256,15 @@ The exported file contains the following sheets in this order:
 
 ### Import Order
 Data is imported in this specific order to maintain referential integrity:
-1. Company (created if doesn't exist)
-2. Functions
-3. Jobs
-4. Tasks
-5. Processes
-6. Task-Process relationships
-7. Job-Task relationships
-8. People
+1. Companies (from Company sheet)
+2. Company (ensured/created from companyName parameter)
+3. Functions
+4. Jobs
+5. Tasks
+6. Processes
+7. Task-Process relationships
+8. Job-Task relationships
+9. People
 
 ### Dry Run Mode
 When `dryRun=true`:
@@ -294,7 +302,7 @@ Run `test-export.ps1` to export data:
 
 2. **400 Bad Request - Missing required sheets**
    - Cause: Excel file doesn't have required sheets
-   - Solution: Ensure file has all required sheets (Function, Job, Task, Process, Task-Process, Job-Task)
+   - Solution: Ensure file has all required sheets (Company, Function, Job, Task, Process, Task-Process, Job-Task)
 
 3. **400 Bad Request - Invalid file type**
    - Cause: File is not .xlsx format

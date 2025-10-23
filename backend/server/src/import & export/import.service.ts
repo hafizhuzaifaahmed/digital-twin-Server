@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ParsedExcelData,
+  CompanySheetRow,
   FunctionSheetRow,
   JobSheetRow,
   TaskSheetRow,
@@ -45,10 +46,16 @@ export class ImportService {
     try {
       // Execute entire import in a transaction
       await this.prisma.$transaction(async (tx) => {
-        // Phase 1: Ensure company exists
+        // Phase 1: Import companies first
+        response.details['Company'] = await this.importCompanies(
+          tx,
+          parsedData.companies,
+        );
+
+        // Phase 2: Ensure company exists
         const company = await this.ensureCompany(tx, companyName);
 
-        // Phase 2: Import in bottom-up order
+        // Phase 3: Import in bottom-up order
         response.details['Function'] = await this.importFunctions(
           tx,
           parsedData.functions,
@@ -169,6 +176,86 @@ export class ImportService {
     }
 
     return company;
+  }
+
+  /**
+   * Import Companies
+   */
+  private async importCompanies(
+    tx: any,
+    companies: any[],
+  ): Promise<SheetImportDetail> {
+    const detail: SheetImportDetail = {
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    for (let i = 0; i < companies.length; i++) {
+      const row = companies[i];
+      try {
+        // Check if company already exists by companyCode
+        const existing = await tx.company.findUnique({
+          where: { companyCode: row['Company Code'] },
+        });
+
+        if (existing) {
+          detail.skipped++;
+          continue;
+        }
+
+        // Get or create admin user for company creation
+        let adminUser = await tx.user.findFirst({
+          where: { role: { name: 'ADMIN' } },
+        });
+
+        if (!adminUser) {
+          // Create admin role if doesn't exist
+          let adminRole = await tx.role.findFirst({
+            where: { name: 'ADMIN' },
+          });
+
+          if (!adminRole) {
+            adminRole = await tx.role.create({
+              data: {
+                name: 'ADMIN',
+                description: 'Administrator role',
+              },
+            });
+          }
+
+          // Create default admin user
+          adminUser = await tx.user.create({
+            data: {
+              email: 'admin@system.com',
+              password: 'hashed_password',
+              name: 'System Admin',
+              role_id: adminRole.role_id,
+            },
+          });
+        }
+
+        // Create company
+        await tx.company.create({
+          data: {
+            companyCode: row['Company Code'],
+            name: row['Company Name'],
+            created_by: adminUser.user_id,
+          },
+        });
+
+        detail.imported++;
+      } catch (error) {
+        detail.failed++;
+        detail.errors.push({
+          row: i + 2, // +2 because Excel is 1-indexed and has header row
+          error: error.message,
+        });
+      }
+    }
+
+    return detail;
   }
 
   /**
