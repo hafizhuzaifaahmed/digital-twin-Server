@@ -63,14 +63,28 @@ export class ExcelParserService {
 
     // Convert sheet to JSON with header row as keys
     const data = XLSX.utils.sheet_to_json(worksheet, {
-      defval: null, // Use null for empty cells
+      defval: '', // Use empty string for empty cells (instead of null)
       raw: false, // Convert numbers to strings
+      blankrows: false, // Skip blank rows
+    });
+
+    // Clean up column names - remove extra spaces and normalize
+    const cleanedData = data.map((row: any) => {
+      const cleanedRow: any = {};
+      for (const key in row) {
+        // Trim whitespace from column names
+        const cleanKey = key.trim();
+        // Also trim whitespace from values
+        const value = row[key];
+        cleanedRow[cleanKey] = typeof value === 'string' ? value.trim() : value;
+      }
+      return cleanedRow;
     });
 
     // Filter out completely empty rows
-    return data.filter((row: any) => {
+    return cleanedData.filter((row: any) => {
       return Object.values(row).some(
-        (value) => value !== null && value !== '',
+        (value) => value !== null && value !== '' && value !== undefined,
       );
     });
   }

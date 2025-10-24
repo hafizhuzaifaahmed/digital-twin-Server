@@ -41,10 +41,6 @@ export class ImportController {
           type: 'string',
           format: 'binary',
         },
-        companyName: {
-          type: 'string',
-          default: 'Maldova Hospital',
-        },
         dryRun: {
           type: 'string',
           description: 'Set to "true" to test without saving to database',
@@ -55,7 +51,6 @@ export class ImportController {
   })
   async importExcel(
     @UploadedFile() file: Express.Multer.File,
-    @Body('companyName') companyName?: string,
     @Body('dryRun') dryRun?: string,
   ): Promise<ImportResponseDto> {
     // Validate file upload
@@ -96,11 +91,9 @@ export class ImportController {
     const parsedData = this.excelParserService.parseExcelFile(file.buffer);
 
     // Import data
-    const company = companyName || 'Maldova Hospital';
     const isDryRun = dryRun === 'true' || dryRun === '1';
     const result = await this.importService.importExcelData(
       parsedData,
-      company,
       isDryRun,
     );
 
