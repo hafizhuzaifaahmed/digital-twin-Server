@@ -26,7 +26,6 @@ export class ImportService {
    */
   async importExcelData(
     parsedData: ParsedExcelData,
-    companyName: string,
     dryRun: boolean = false,
   ): Promise<ImportResponseDto> {
     const response: ImportResponseDto = {
@@ -44,7 +43,7 @@ export class ImportService {
     };
 
     try {
-      // Execute entire import in a transaction
+      // Execute entire import in a transaction with extended timeout (5 minutes)
       await this.prisma.$transaction(async (tx) => {
         // Phase 1: Import companies first
         response.details['Company'] = await this.importCompanies(
@@ -52,32 +51,25 @@ export class ImportService {
           parsedData.companies,
         );
 
-        // Phase 2: Ensure company exists
-        const company = await this.ensureCompany(tx, companyName);
-
-        // Phase 3: Import in bottom-up order
+        // Phase 2: Import in bottom-up order (no company filtering)
         response.details['Function'] = await this.importFunctions(
           tx,
           parsedData.functions,
-          company.company_id,
         );
 
         response.details['Job'] = await this.importJobs(
           tx,
           parsedData.jobs,
-          company.company_id,
         );
 
         response.details['Task'] = await this.importTasks(
           tx,
           parsedData.tasks,
-          company.company_id,
         );
 
         response.details['Process'] = await this.importProcesses(
           tx,
           parsedData.processes,
-          company.company_id,
         );
 
         response.details['Task-Process'] = await this.importTaskProcess(
@@ -93,7 +85,6 @@ export class ImportService {
         response.details['People'] = await this.importPeople(
           tx,
           parsedData.people,
-          company.company_id,
         );
 
         // Calculate summary
@@ -103,22 +94,32 @@ export class ImportService {
         if (dryRun) {
           throw new Error('DRY_RUN_ROLLBACK');
         }
+      }, {
+        maxWait: 300000, // 5 minutes - maximum time to wait for a transaction to start
+        timeout: 300000, // 5 minutes - maximum time for the transaction to complete
       });
 
       response.success = true;
       response.message = dryRun
         ? 'Dry run completed successfully (no data saved)'
-        : 'Import completed successfully';
+        : 'Data imported successfully';
     } catch (error) {
       if (error.message === 'DRY_RUN_ROLLBACK') {
-        // This is expected for dry run
         response.success = true;
-        response.message = 'Dry run completed successfully (no data saved)';
-        response.summary = this.calculateSummary(response.details);
+        response.message = 'Dry run validation passed (no data saved)';
       } else {
         response.success = false;
         response.message = `Import failed: ${error.message}`;
-        throw new BadRequestException(response.message);
+        
+        // Add error to summary if transaction failed
+        if (Object.keys(response.details).length === 0) {
+          response.details['Error'] = {
+            imported: 0,
+            skipped: 0,
+            failed: 1,
+            errors: [{ row: 0, error: error.message }],
+          };
+        }
       }
     }
 
@@ -126,7 +127,7 @@ export class ImportService {
   }
 
   /**
-   * Ensure company exists or create it
+   * Ensure company exists or create it (deprecated - no longer used)
    */
   private async ensureCompany(tx: any, companyName: string) {
     let company = await tx.company.findFirst({
@@ -264,7 +265,6 @@ export class ImportService {
   private async importFunctions(
     tx: any,
     functions: FunctionSheetRow[],
-    companyId: number,
   ): Promise<SheetImportDetail> {
     const detail: SheetImportDetail = {
       imported: 0,
@@ -286,6 +286,20 @@ export class ImportService {
           continue;
         }
 
+        // Validate Company Code is provided
+        if (!row['Company Code']) {
+          throw new Error(`Function "${row['Function Code']}" is missing Company Code. Please provide a Company Code for this function.`);
+        }
+
+        // Get company from the row's Company Code
+        const company = await tx.company.findUnique({
+          where: { companyCode: row['Company Code'] },
+        });
+
+        if (!company) {
+          throw new Error(`Company with code "${row['Company Code']}" not found. Please add this company to the Company sheet first.`);
+        }
+
         // Find parent function if specified
         let parentFunctionId = null;
         if (row['Parent Function Code']) {
@@ -302,7 +316,7 @@ export class ImportService {
           data: {
             functionCode: row['Function Code'],
             name: row['Function Name'],
-            company_id: companyId,
+            company_id: company.company_id,
             backgroundColor: row['Background color'] || null,
             parent_function_id: parentFunctionId,
             overview: row['Description'] || null,
@@ -328,7 +342,6 @@ export class ImportService {
   private async importJobs(
     tx: any,
     jobs: JobSheetRow[],
-    companyId: number,
   ): Promise<SheetImportDetail> {
     const detail: SheetImportDetail = {
       imported: 0,
@@ -353,17 +366,31 @@ export class ImportService {
         if (!job) {
           isNewJob = true;
           
-          // Find function
-          const func = await tx.function.findUnique({
-            where: { functionCode: row['Function'] },
+          // Validate Company Code is provided
+          if (!row['Company Code']) {
+            throw new Error(`Job "${row['Job Code']}" is missing Company Code. Please provide a Company Code for this job.`);
+          }
+          
+          // Get company from the row's Company Code
+          const company = await tx.company.findUnique({
+            where: { companyCode: row['Company Code'] },
+          });
+
+          if (!company) {
+            throw new Error(`Company with code "${row['Company Code']}" not found. Please add this company to the Company sheet first.`);
+          }
+          
+          // Find function by name
+          const func = await tx.function.findFirst({
+            where: { name: row['Function'] },
           });
 
           if (!func) {
-            throw new Error(`Function "${row['Function']}" not found`);
+            throw new Error(`Function with name "${row['Function']}" not found. Make sure the Function Name exists in the Function sheet.`);
           }
 
           // Find or create job level
-          const levelRank = row['Level Rank'] || 1;
+          const levelRank = parseInt(row['Level Rank']?.toString() || '1');
           let jobLevel = await tx.job_level.findUnique({
             where: { level_rank: levelRank },
           });
@@ -392,7 +419,7 @@ export class ImportService {
             data: {
               jobCode: row['Job Code'],
               name: row['Job Name'],
-              company_id: companyId,
+              company_id: company.company_id,
               function_id: func.function_id,
               job_level_id: jobLevel.id,
               hourlyRate: parseFloat(row['Hourly Rate']?.toString() || '0'),
@@ -501,7 +528,6 @@ export class ImportService {
   private async importTasks(
     tx: any,
     tasks: TaskSheetRow[],
-    companyId: number,
   ): Promise<SheetImportDetail> {
     const detail: SheetImportDetail = {
       imported: 0,
@@ -526,12 +552,28 @@ export class ImportService {
         if (!task) {
           isNewTask = true;
           
+          // Validate Company Code is provided
+          const companyCode = row['Company Code'];
+          
+          if (!companyCode || companyCode === '') {
+            throw new Error(`Task "${row['Task Code']}" has empty Company Code. Row data: ${JSON.stringify(row)}`);
+          }
+          
+          // Get company from the row's Company Code
+          const company = await tx.company.findUnique({
+            where: { companyCode: companyCode },
+          });
+
+          if (!company) {
+            throw new Error(`Task "${row['Task Code']}": Company with code "${companyCode}" not found in database. Please add a company with this exact code to the Company sheet first.`);
+          }
+          
           // Create task
           task = await tx.task.create({
             data: {
               task_code: row['Task Code'],
               task_name: row['Task Name'],
-              task_company_id: companyId,
+              task_company_id: company.company_id,
               task_capacity_minutes: parseInt(
                 row['Capacity (minutes)']?.toString() || '0',
               ),
@@ -636,7 +678,6 @@ export class ImportService {
   private async importProcesses(
     tx: any,
     processes: ProcessSheetRow[],
-    companyId: number,
   ): Promise<SheetImportDetail> {
     const detail: SheetImportDetail = {
       imported: 0,
@@ -658,12 +699,26 @@ export class ImportService {
           continue;
         }
 
+        // Validate Company Code is provided
+        if (!row['Company Code']) {
+          throw new Error(`Process "${row['Process Code']}" is missing Company Code. Please provide a Company Code for this process.`);
+        }
+
+        // Get company from the row's Company Code
+        const company = await tx.company.findUnique({
+          where: { companyCode: row['Company Code'] },
+        });
+
+        if (!company) {
+          throw new Error(`Company with code "${row['Company Code']}" not found. Please add this company to the Company sheet first.`);
+        }
+
         // Create process
         await tx.process.create({
           data: {
             process_code: row['Process Code'],
             process_name: row['Process Name'],
-            company_id: companyId,
+            company_id: company.company_id,
             process_overview: row['Process Overview'] || '',
           },
         });
@@ -698,9 +753,8 @@ export class ImportService {
     for (let i = 0; i < taskProcesses.length; i++) {
       const row = taskProcesses[i];
       try {
-        // Find task - use the Prisma client directly, not through transaction
-        // This allows us to find tasks that exist in the database but weren't created in this transaction
-        const task = await this.prisma.task.findUnique({
+        // Find task - use transaction to find records created in this transaction
+        const task = await tx.task.findUnique({
           where: { task_code: row['TaskCode'] },
         });
 
@@ -710,8 +764,8 @@ export class ImportService {
           continue;
         }
 
-        // Find process - use the Prisma client directly
-        const process = await this.prisma.process.findUnique({
+        // Find process - use transaction
+        const process = await tx.process.findUnique({
           where: { process_code: row['ProcessCode'] },
         });
 
@@ -775,8 +829,8 @@ export class ImportService {
     for (let i = 0; i < jobTasks.length; i++) {
       const row = jobTasks[i];
       try {
-        // Find job - use Prisma client directly to find existing records
-        const job = await this.prisma.job.findUnique({
+        // Find job - use transaction to find records created in this transaction
+        const job = await tx.job.findUnique({
           where: { jobCode: row['JobCode'] },
         });
 
@@ -786,8 +840,8 @@ export class ImportService {
           continue;
         }
 
-        // Find task - use Prisma client directly
-        const task = await this.prisma.task.findUnique({
+        // Find task - use transaction
+        const task = await tx.task.findUnique({
           where: { task_code: row['TaskCode'] },
         });
 
@@ -839,7 +893,6 @@ export class ImportService {
   private async importPeople(
     tx: any,
     people: PeopleSheetRow[],
-    companyId: number,
   ): Promise<SheetImportDetail> {
     const detail: SheetImportDetail = {
       imported: 0,
@@ -873,13 +926,27 @@ export class ImportService {
           continue;
         }
 
+        // Validate Company Code is provided
+        if (!row['Company Code']) {
+          throw new Error(`Person "${row['First Name']} ${row['Surname']}" is missing Company Code. Please provide a Company Code for this person.`);
+        }
+
+        // Get company from the row's Company Code
+        const company = await tx.company.findUnique({
+          where: { companyCode: row['Company Code'] },
+        });
+
+        if (!company) {
+          throw new Error(`Company with code "${row['Company Code']}" not found. Please add this company to the Company sheet first.`);
+        }
+
         // Find job by job code only
         const job = await tx.job.findUnique({
           where: { jobCode: row['Job Code'] },
         });
 
         if (!job) {
-          throw new Error(`Job "${row['Job Code']}" not found`);
+          throw new Error(`Job with code "${row['Job Code']}" not found. Make sure the Job Code exists in the Job sheet.`);
         }
 
         // Create person
@@ -889,7 +956,7 @@ export class ImportService {
             people_surname: row['Surname'],
             people_email: row['Email'],
             people_phone: row['Phone'] || null,
-            company_id: companyId,
+            company_id: company.company_id,
             job_id: job.job_id,
             is_manager:
               row['Is Manager']?.toLowerCase() === 'yes' ||
