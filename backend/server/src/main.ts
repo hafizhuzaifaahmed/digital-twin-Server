@@ -13,8 +13,9 @@ async function bootstrap() {
     'https://abdullahfahmi.itch.io',
     'https://html-classic.itch.zone',
     'https://crystalsystem-3dapp-production.up.railway.app',
-    'https://crystalsytem-3dapp-test.up.railway.app/',
-    'https://crystalsystemcms-production.up.railway.app/'
+    'https://crystalsytem-3dapp-test.up.railway.app',
+    'https://crystalsystemcms-production.up.railway.app',
+    'https://crystalsystemcms-testing-e377.up.railway.app'
   ];
   
   app.enableCors({
