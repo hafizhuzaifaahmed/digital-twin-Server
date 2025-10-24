@@ -19,6 +19,7 @@ import { SkillModule } from './skill/skill.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
+import { ImportModule } from './import & export/import.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { RolesGuard } from './auth/roles.guard';
     RoleModule,
     SkillModule,
     AuthModule,
+    ImportModule,
   ],
   controllers: [AppController],
   providers: [
