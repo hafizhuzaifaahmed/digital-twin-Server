@@ -851,17 +851,29 @@ export class ImportService {
     for (let i = 0; i < people.length; i++) {
       const row = people[i];
       try {
-        // Check if person already exists
-        const existing = await tx.people.findUnique({
-          where: { people_email: row['Email'] },
-        });
+        // Check if person already exists by email OR phone
+        let existing = null;
+        
+        // First check by email
+        if (row['Email']) {
+          existing = await tx.people.findUnique({
+            where: { people_email: row['Email'] },
+          });
+        }
+        
+        // If not found by email and phone is provided, check by phone
+        if (!existing && row['Phone']) {
+          existing = await tx.people.findFirst({
+            where: { people_phone: row['Phone'] },
+          });
+        }
 
         if (existing) {
           detail.skipped++;
           continue;
         }
 
-        // Find job
+        // Find job by job code only
         const job = await tx.job.findUnique({
           where: { jobCode: row['Job Code'] },
         });
