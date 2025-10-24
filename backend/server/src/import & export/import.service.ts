@@ -286,6 +286,17 @@ export class ImportService {
           continue;
         }
 
+        // Find parent function if specified
+        let parentFunctionId = null;
+        if (row['Parent Function Code']) {
+          const parentFunction = await tx.function.findUnique({
+            where: { functionCode: row['Parent Function Code'] },
+          });
+          if (parentFunction) {
+            parentFunctionId = parentFunction.function_id;
+          }
+        }
+
         // Create function
         await tx.function.create({
           data: {
@@ -293,7 +304,8 @@ export class ImportService {
             name: row['Function Name'],
             company_id: companyId,
             backgroundColor: row['Background color'] || null,
-            overview: row['Parent Function Description'] || null,
+            parent_function_id: parentFunctionId,
+            overview: row['Description'] || null,
           },
         });
 
@@ -329,73 +341,83 @@ export class ImportService {
       const row = jobs[i];
       try {
         // Check if job already exists
-        const existing = await tx.job.findUnique({
+        let job = await tx.job.findUnique({
           where: { jobCode: row['Job Code'] },
+          include: {
+            jobSkills: true,
+          },
         });
 
-        if (existing) {
-          detail.skipped++;
-          continue;
-        }
+        let isNewJob = false;
+        
+        if (!job) {
+          isNewJob = true;
+          
+          // Find function
+          const func = await tx.function.findUnique({
+            where: { functionCode: row['Function'] },
+          });
 
-        // Find function
-        const func = await tx.function.findUnique({
-          where: { functionCode: row['Function'] },
-        });
+          if (!func) {
+            throw new Error(`Function "${row['Function']}" not found`);
+          }
 
-        if (!func) {
-          throw new Error(`Function "${row['Function']}" not found`);
-        }
+          // Find or create job level
+          const levelRank = row['Level Rank'] || 1;
+          let jobLevel = await tx.job_level.findUnique({
+            where: { level_rank: levelRank },
+          });
 
-        // Find or create job level
-        const levelRank = row['Level Rank'] || 1;
-        let jobLevel = await tx.job_level.findUnique({
-          where: { level_rank: levelRank },
-        });
+          if (!jobLevel) {
+            const levelNames = [
+              'NOVICE',
+              'INTERMEDIATE',
+              'PROFICIENT',
+              'ADVANCED',
+              'EXPERT',
+            ];
+            const levelName = levelNames[Math.min(levelRank - 1, 4)];
 
-        if (!jobLevel) {
-          const levelNames = [
-            'NOVICE',
-            'INTERMEDIATE',
-            'PROFICIENT',
-            'ADVANCED',
-            'EXPERT',
-          ];
-          const levelName = levelNames[Math.min(levelRank - 1, 4)];
+            jobLevel = await tx.job_level.create({
+              data: {
+                level_name: levelName,
+                level_rank: levelRank,
+                description: `Level ${levelRank}`,
+              },
+            });
+          }
 
-          jobLevel = await tx.job_level.create({
+          // Create job
+          job = await tx.job.create({
             data: {
-              level_name: levelName,
-              level_rank: levelRank,
-              description: `Level ${levelRank}`,
+              jobCode: row['Job Code'],
+              name: row['Job Name'],
+              company_id: companyId,
+              function_id: func.function_id,
+              job_level_id: jobLevel.id,
+              hourlyRate: parseFloat(row['Hourly Rate']?.toString() || '0'),
+              maxHoursPerDay: parseFloat(
+                row['Max Hours Per Day']?.toString() || '8',
+              ),
+              description: row['Job Description'] || '',
+              overview: row['Job Description'] || null,
+              updatedAt: new Date(),
+            },
+            include: {
+              jobSkills: true,
             },
           });
         }
 
-        // Create job
-        const job = await tx.job.create({
-          data: {
-            jobCode: row['Job Code'],
-            name: row['Job Name'],
-            company_id: companyId,
-            function_id: func.function_id,
-            job_level_id: jobLevel.id,
-            hourlyRate: parseFloat(row['Hourly Rate']?.toString() || '0'),
-            maxHoursPerDay: parseFloat(
-              row['Max Hours Per Day']?.toString() || '8',
-            ),
-            description: row['Job Description'] || '',
-            overview: row['Job Description'] || null,
-            updatedAt: new Date(),
-          },
-        });
-
-        // Handle skills if provided
+        // Handle skills if provided (whether job is new or existing)
         if (row['Skills']) {
           const skills = row['Skills'].split(',').map((s) => s.trim());
-          const skillRank = row['Skill Rank'] || 1;
+          const skillRanks = row['Skill Rank'] ? row['Skill Rank'].toString().split(',').map((s) => parseInt(s.trim())) : [];
 
-          for (const skillName of skills) {
+          for (let idx = 0; idx < skills.length; idx++) {
+            const skillName = skills[idx];
+            const skillRank = skillRanks[idx] || skillRanks[0] || 1;
+            
             if (skillName) {
               // Find or create skill
               let skill = await tx.skill.findUnique({
@@ -408,43 +430,59 @@ export class ImportService {
                 });
               }
 
-              // Find or create skill level
-              let skillLevel = await tx.skill_level.findUnique({
-                where: { level_rank: skillRank },
+              // Check if this job-skill relationship already exists
+              const existingJobSkill = await tx.job_skill.findUnique({
+                where: {
+                  job_id_skill_id: {
+                    job_id: job.job_id,
+                    skill_id: skill.skill_id,
+                  },
+                },
               });
 
-              if (!skillLevel) {
-                const levelNames = [
-                  'NOVICE',
-                  'INTERMEDIATE',
-                  'PROFICIENT',
-                  'ADVANCED',
-                  'EXPERT',
-                ];
-                const levelName = levelNames[Math.min(skillRank - 1, 4)];
+              if (!existingJobSkill) {
+                // Find or create skill level
+                let skillLevel = await tx.skill_level.findUnique({
+                  where: { level_rank: skillRank },
+                });
 
-                skillLevel = await tx.skill_level.create({
+                if (!skillLevel) {
+                  const levelNames = [
+                    'NOVICE',
+                    'INTERMEDIATE',
+                    'PROFICIENT',
+                    'ADVANCED',
+                    'EXPERT',
+                  ];
+                  const levelName = levelNames[Math.min(skillRank - 1, 4)];
+
+                  skillLevel = await tx.skill_level.create({
+                    data: {
+                      level_name: levelName,
+                      level_rank: skillRank,
+                      description: `Skill level ${skillRank}`,
+                    },
+                  });
+                }
+
+                // Create job_skill relationship
+                await tx.job_skill.create({
                   data: {
-                    level_name: levelName,
-                    level_rank: skillRank,
-                    description: `Skill level ${skillRank}`,
+                    job_id: job.job_id,
+                    skill_id: skill.skill_id,
+                    skill_level_id: skillLevel.id,
                   },
                 });
               }
-
-              // Create job_skill relationship
-              await tx.job_skill.create({
-                data: {
-                  job_id: job.job_id,
-                  skill_id: skill.skill_id,
-                  skill_level_id: skillLevel.id,
-                },
-              });
             }
           }
         }
 
-        detail.imported++;
+        if (isNewJob) {
+          detail.imported++;
+        } else {
+          detail.skipped++;
+        }
       } catch (error) {
         detail.failed++;
         detail.errors.push({
@@ -476,34 +514,44 @@ export class ImportService {
       const row = tasks[i];
       try {
         // Check if task already exists
-        const existing = await tx.task.findUnique({
+        let task = await tx.task.findUnique({
           where: { task_code: row['Task Code'] },
-        });
-
-        if (existing) {
-          detail.skipped++;
-          continue;
-        }
-
-        // Create task
-        const task = await tx.task.create({
-          data: {
-            task_code: row['Task Code'],
-            task_name: row['Task Name'],
-            task_company_id: companyId,
-            task_capacity_minutes: parseInt(
-              row['Capacity (minutes)']?.toString() || '0',
-            ),
-            task_overview: row['Task Description'] || '',
+          include: {
+            task_skill: true,
           },
         });
 
-        // Handle skills if provided
+        let isNewTask = false;
+
+        if (!task) {
+          isNewTask = true;
+          
+          // Create task
+          task = await tx.task.create({
+            data: {
+              task_code: row['Task Code'],
+              task_name: row['Task Name'],
+              task_company_id: companyId,
+              task_capacity_minutes: parseInt(
+                row['Capacity (minutes)']?.toString() || '0',
+              ),
+              task_overview: row['Task Description'] || '',
+            },
+            include: {
+              task_skill: true,
+            },
+          });
+        }
+
+        // Handle skills if provided (whether task is new or existing)
         if (row['Req Skills']) {
           const skills = row['Req Skills'].split(',').map((s) => s.trim());
-          const skillRank = row['Skill Rank'] || 1;
+          const skillRanks = row['Skill Rank'] ? row['Skill Rank'].toString().split(',').map((s) => parseInt(s.trim())) : [];
 
-          for (const skillName of skills) {
+          for (let idx = 0; idx < skills.length; idx++) {
+            const skillName = skills[idx];
+            const skillRank = skillRanks[idx] || skillRanks[0] || 1;
+            
             if (skillName) {
               // Find or create skill
               let skill = await tx.skill.findUnique({
@@ -516,44 +564,60 @@ export class ImportService {
                 });
               }
 
-              // Find or create skill level
-              let skillLevel = await tx.skill_level.findUnique({
-                where: { level_rank: skillRank },
+              // Check if this task-skill relationship already exists
+              const existingTaskSkill = await tx.task_skill.findUnique({
+                where: {
+                  task_skill_task_id_task_skill_skill_id: {
+                    task_skill_task_id: task.task_id,
+                    task_skill_skill_id: skill.skill_id,
+                  },
+                },
               });
 
-              if (!skillLevel) {
-                const levelNames = [
-                  'NOVICE',
-                  'INTERMEDIATE',
-                  'PROFICIENT',
-                  'ADVANCED',
-                  'EXPERT',
-                ];
-                const levelName = levelNames[Math.min(skillRank - 1, 4)];
+              if (!existingTaskSkill) {
+                // Find or create skill level
+                let skillLevel = await tx.skill_level.findUnique({
+                  where: { level_rank: skillRank },
+                });
 
-                skillLevel = await tx.skill_level.create({
+                if (!skillLevel) {
+                  const levelNames = [
+                    'NOVICE',
+                    'INTERMEDIATE',
+                    'PROFICIENT',
+                    'ADVANCED',
+                    'EXPERT',
+                  ];
+                  const levelName = levelNames[Math.min(skillRank - 1, 4)];
+
+                  skillLevel = await tx.skill_level.create({
+                    data: {
+                      level_name: levelName,
+                      level_rank: skillRank,
+                      description: `Skill level ${skillRank}`,
+                    },
+                  });
+                }
+
+                // Create task_skill relationship
+                await tx.task_skill.create({
                   data: {
-                    level_name: levelName,
-                    level_rank: skillRank,
-                    description: `Skill level ${skillRank}`,
+                    task_skill_task_id: task.task_id,
+                    task_skill_skill_id: skill.skill_id,
+                    task_skill_level_id: skillLevel.id,
+                    skill_name: skillName,
                   },
                 });
               }
-
-              // Create task_skill relationship
-              await tx.task_skill.create({
-                data: {
-                  task_skill_task_id: task.task_id,
-                  task_skill_skill_id: skill.skill_id,
-                  task_skill_level_id: skillLevel.id,
-                  skill_name: skillName,
-                },
-              });
             }
           }
         }
 
-        detail.imported++;
+        if (isNewTask) {
+          detail.imported++;
+        } else {
+          detail.skipped++;
+        }
       } catch (error) {
         detail.failed++;
         detail.errors.push({
@@ -799,11 +863,11 @@ export class ImportService {
 
         // Find job
         const job = await tx.job.findUnique({
-          where: { jobCode: row['Job'] },
+          where: { jobCode: row['Job Code'] },
         });
 
         if (!job) {
-          throw new Error(`Job "${row['Job']}" not found`);
+          throw new Error(`Job "${row['Job Code']}" not found`);
         }
 
         // Create person

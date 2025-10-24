@@ -28,7 +28,6 @@ export class ExcelParserService {
         taskProcess: [],
         jobTask: [],
         functionJob: [],
-        peopleJob: [],
       };
 
       // Parse each sheet (Company first)
@@ -41,7 +40,6 @@ export class ExcelParserService {
       parsedData.taskProcess = this.parseSheet(workbook, 'Task-Process');
       parsedData.jobTask = this.parseSheet(workbook, 'Job-Task');
       parsedData.functionJob = this.parseSheet(workbook, 'Function-Job');
-      parsedData.peopleJob = this.parseSheet(workbook, 'people-job');
 
       return parsedData;
     } catch (error) {

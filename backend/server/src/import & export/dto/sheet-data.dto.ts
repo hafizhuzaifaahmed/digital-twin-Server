@@ -1,7 +1,7 @@
 // Company sheet data
 export interface CompanySheetRow {
-  'Company Code': string;
   'Company Name': string;
+  'Company Code': string;
 }
 
 // Function sheet data
@@ -9,8 +9,9 @@ export interface FunctionSheetRow {
   'Function Name': string;
   'Function Code': string;
   'Background color': string;
-  'Company': string;
-  'Parent Function Description': string;
+  'Company Code': string;
+  'Parent Function Code': string;
+  'Description': string;
 }
 
 // Job sheet data
@@ -20,7 +21,7 @@ export interface JobSheetRow {
   'Hourly Rate': number;
   'Max Hours Per Day': number;
   'Function': string;
-  'Company': string;
+  'Company Code': string;
   'Level Rank': number;
   'Skills': string;
   'Skill Rank': number;
@@ -32,7 +33,7 @@ export interface TaskSheetRow {
   'Task Name': string;
   'Task Code': string;
   'Capacity (minutes)': number;
-  'Company': string;
+  'Company Code': string;
   'Associated Jobs': string;
   'Req Skills': string;
   'Skill Rank': number;
@@ -43,7 +44,7 @@ export interface TaskSheetRow {
 export interface ProcessSheetRow {
   'Process Name': string;
   'Process Code': string;
-  'Company': string;
+  'Company Code': string;
   'Process Overview': string;
 }
 
@@ -53,8 +54,8 @@ export interface PeopleSheetRow {
   'Surname': string;
   'Email': string;
   'Phone': string;
-  'Company': string;
-  'Job': string;
+  'Company Code': string;
+  'Job Code': string;
   'Is Manager': string;
 }
 
@@ -77,12 +78,6 @@ export interface FunctionJobSheetRow {
   'Function Code': string;
 }
 
-// People-Job junction data (if needed)
-export interface PeopleJobSheetRow {
-  'people id': number;
-  'job code': string;
-}
-
 export interface ParsedExcelData {
   companies: CompanySheetRow[];
   functions: FunctionSheetRow[];
@@ -93,5 +88,4 @@ export interface ParsedExcelData {
   taskProcess: TaskProcessSheetRow[];
   jobTask: JobTaskSheetRow[];
   functionJob: FunctionJobSheetRow[];
-  peopleJob: PeopleJobSheetRow[];
 }

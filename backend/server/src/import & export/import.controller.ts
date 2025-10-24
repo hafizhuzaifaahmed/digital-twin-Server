@@ -154,33 +154,41 @@ export class ImportController {
         taskProcess: parsedData.taskProcess.length,
         jobTask: parsedData.jobTask.length,
         functionJob: parsedData.functionJob.length,
-        peopleJob: parsedData.peopleJob.length,
       },
       data: parsedData, // Include actual data for debugging
     };
   }
 
-  @Get('export')
+  @Post('export')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Export company data to Excel file (Requires Authentication)' })
-  @ApiQuery({
-    name: 'companyName',
-    required: false,
-    description: 'Company name to export data for',
-    example: 'Maldova Hospital',
+  @ApiOperation({ summary: 'Export process data to Excel file (Requires Authentication)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        ids: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Array of process IDs to export',
+          example: [25, 24, 23],
+        },
+      },
+    },
   })
   async exportExcel(
-    @Query('companyName') companyName: string,
+    @Body('ids') processIds: number[],
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    const company = companyName || 'Maldova Hospital';
+    if (!processIds || processIds.length === 0) {
+      throw new BadRequestException('Process IDs array is required');
+    }
 
     try {
       // Export data to Excel buffer
-      const excelBuffer = await this.exportService.exportToExcel(company);
+      const excelBuffer = await this.exportService.exportToExcel(processIds);
 
       // Set response headers for file download
-      const fileName = `${company.replace(/\s+/g, '_')}_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `processes_export_${new Date().toISOString().split('T')[0]}.xlsx`;
       res.set({
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="${fileName}"`,
