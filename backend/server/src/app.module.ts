@@ -20,6 +20,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { ImportModule } from './import & export/import.module';
+import { OrganizationTypeModule } from './organization-type/organization-type.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ImportModule } from './import & export/import.module';
     SkillModule,
     AuthModule,
     ImportModule,
+    OrganizationTypeModule,
   ],
   controllers: [AppController],
   providers: [

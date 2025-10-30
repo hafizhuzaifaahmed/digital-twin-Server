@@ -33,25 +33,35 @@ model role {
   users       user[]
 }
 
+model OrganizationType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  companies   company[]
+}
+
 /// ///////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////
 model company {
-  company_id  Int        @id @default(autoincrement())
-  companyCode String     @unique
-  name        String
-  created_by  Int
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
-  Function    Function[]
-  buildings   building[]
-  creator     user       @relation("CompanyCreator", fields: [created_by], references: [user_id])
-  job         job[]
-  people      people[]
-  processes   process[]
-  task        task[]
-  employees   user[]     @relation("UserCompany")
+  company_id             Int                 @id @default(autoincrement())
+  companyCode            String              @unique
+  name                   String
+  created_by             Int
+  created_at             DateTime            @default(now())
+  updated_at             DateTime            @updatedAt
+  organizationTypeId     Int?                @map("org_type_id")
+  Function               Function[]
+  buildings              building[]
+  creator                user                @relation("CompanyCreator", fields: [created_by], references: [user_id])
+  organizationType       OrganizationType?   @relation(fields: [organizationTypeId], references: [id])
+  job                    job[]
+  people                 people[]
+  processes              process[]
+  task                   task[]
+  employees              user[]              @relation("UserCompany")
 
   @@index([created_by], map: "company_created_by_fkey")
+  @@index([organizationTypeId], map: "company_org_type_id_fkey")
 }
 
 model people {
