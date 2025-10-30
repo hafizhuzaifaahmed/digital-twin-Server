@@ -10,6 +10,14 @@ const levels = [
   { level_name: 'EXPERT', level_rank: 5 },
 ] as const;
 
+const organizationTypes = [
+  { name: 'Functional', description: 'Department-based hierarchical structure' },
+  { name: 'Divisional', description: 'Organized by product, market, or geographic divisions' },
+  { name: 'Matrix', description: 'Dual reporting structure combining functional and divisional' },
+  { name: 'Flat', description: 'Few or no levels of middle management' },
+  { name: 'Network', description: 'Decentralized structure with interconnected teams' },
+];
+
 async function main() {
   // Seed job_level
   for (const l of levels) {
@@ -29,7 +37,16 @@ async function main() {
     });
   }
 
-  console.log('Seeded job_level and skill_level with level_name and level_rank.');
+  // Seed OrganizationType
+  for (const orgType of organizationTypes) {
+    await prisma.organizationType.upsert({
+      where: { name: orgType.name },
+      update: { description: orgType.description },
+      create: { name: orgType.name, description: orgType.description },
+    });
+  }
+
+  console.log('Seeded job_level, skill_level, and OrganizationType.');
 }
 
 main()
