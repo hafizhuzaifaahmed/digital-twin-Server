@@ -9,6 +9,7 @@ async function bootstrap() {
   // Enable CORS
   const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:8000',
     'https://fyp-cms-frontend.vercel.app',
     'https://abdullahfahmi.itch.io',
     'https://html-classic.itch.zone',
