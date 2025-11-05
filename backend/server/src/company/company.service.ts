@@ -12,16 +12,25 @@ export class CompanyService {
       companyCode: dto.companyCode,
       name: dto.name,
       created_by: dto.created_by,
+      org_type_id: dto.org_type_id ?? 1, // Default to Functional (ID: 1)
     };
-    return this.prisma.company.create({ data });
+    return this.prisma.company.create({
+      data,
+      include: { organizationType: true },
+    });
   }
 
   async findAll() {
-    return this.prisma.company.findMany();
+    return this.prisma.company.findMany({
+      include: { organizationType: true },
+    });
   }
 
   async findOne(company_id: number) {
-    const company = await this.prisma.company.findUnique({ where: { company_id } });
+    const company = await this.prisma.company.findUnique({
+      where: { company_id },
+      include: { organizationType: true },
+    });
     if (!company) throw new NotFoundException(`Company ${company_id} not found`);
     return company;
   }
@@ -29,6 +38,7 @@ export class CompanyService {
   async findAllWithRelations() {
     return this.prisma.company.findMany({
       include: {
+        organizationType: true,
         people: true,
         buildings: {
           include: {
@@ -51,6 +61,7 @@ export class CompanyService {
     const company = await this.prisma.company.findUnique({
       where: { company_id },
       include: {
+        organizationType: true,
         people: true,
         buildings: {
           include: {
@@ -76,9 +87,14 @@ export class CompanyService {
       companyCode: dto.companyCode ?? undefined,
       name: dto.name ?? undefined,
       created_by: dto.created_by ?? undefined,
+      org_type_id: dto.org_type_id ?? undefined,
     };
     try {
-      return await this.prisma.company.update({ where: { company_id }, data });
+      return await this.prisma.company.update({
+        where: { company_id },
+        data,
+        include: { organizationType: true },
+      });
     } catch (e: any) {
       if (e?.code === 'P2025') throw new NotFoundException(`Company ${company_id} not found`);
       if (e?.code === 'P2002') throw new ConflictException('companyCode already exists');

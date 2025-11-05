@@ -21,6 +21,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { ImportModule } from './import & export/import.module';
 import { Users3dModule } from './users-3d/users-3d.module';
+import { OrganizationTypeModule } from './organization-type/organization-type.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { Users3dModule } from './users-3d/users-3d.module';
     SkillModule,
     AuthModule,
     ImportModule,
+    OrganizationTypeModule,
   ],
   controllers: [AppController],
   providers: [

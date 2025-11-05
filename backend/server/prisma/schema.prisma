@@ -58,6 +58,13 @@ model role {
   users       user[]
 }
 
+model OrganizationType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  companies   company[]
+}
+
 /// ///////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////
 model company {
@@ -71,7 +78,7 @@ model company {
   Function         Function[]
   buildings        building[]
   creator          user              @relation("CompanyCreator", fields: [created_by], references: [user_id])
-  OrganizationType OrganizationType? @relation(fields: [org_type_id], references: [id])
+  organizationType OrganizationType? @relation(fields: [org_type_id], references: [id])
   job              job[]
   people           people[]
   processes        process[]
@@ -347,13 +354,6 @@ model Function {
 
   @@index([company_id], map: "Function_company_id_fkey")
   @@index([parent_function_id], map: "Function_parent_function_id_fkey")
-}
-
-model OrganizationType {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String?
-  company     company[]
 }
 
 enum CellType {
