@@ -21,6 +21,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { ImportModule } from './import & export/import.module';
 import { OrganizationTypeModule } from './organization-type/organization-type.module';
+import { HierarchicalViewModule } from './hierarchical-view/hierarchical-view.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { OrganizationTypeModule } from './organization-type/organization-type.mo
     AuthModule,
     ImportModule,
     OrganizationTypeModule,
+    HierarchicalViewModule,
   ],
   controllers: [AppController],
   providers: [

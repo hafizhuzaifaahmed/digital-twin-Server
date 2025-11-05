@@ -5,7 +5,7 @@ import { UpdateOrganizationTypeDto } from './dto/update-organization-type.dto';
 
 @Injectable()
 export class OrganizationTypeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateOrganizationTypeDto) {
     try {
