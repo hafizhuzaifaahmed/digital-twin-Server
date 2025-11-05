@@ -18,12 +18,16 @@ model user {
   company_id       Int?
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
+  created_by       Int?
   createdCompanies company[] @relation("CompanyCreator")
   company          company?  @relation("UserCompany", fields: [company_id], references: [company_id])
+  creator          user?     @relation("UserCreator", fields: [created_by], references: [user_id])
+  createdUsers     user[]    @relation("UserCreator")
   role             role      @relation(fields: [role_id], references: [role_id])
 
   @@index([company_id], map: "user_company_id_fkey")
   @@index([role_id], map: "user_role_id_fkey")
+  @@index([created_by], map: "user_created_by_fkey")
 }
 
 model role {
@@ -36,22 +40,25 @@ model role {
 /// ///////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////
 model company {
-  company_id  Int        @id @default(autoincrement())
-  companyCode String     @unique
-  name        String
-  created_by  Int
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
-  Function    Function[]
-  buildings   building[]
-  creator     user       @relation("CompanyCreator", fields: [created_by], references: [user_id])
-  job         job[]
-  people      people[]
-  processes   process[]
-  task        task[]
-  employees   user[]     @relation("UserCompany")
+  company_id       Int               @id @default(autoincrement())
+  companyCode      String            @unique
+  name             String
+  created_by       Int
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+  org_type_id      Int?
+  Function         Function[]
+  buildings        building[]
+  creator          user              @relation("CompanyCreator", fields: [created_by], references: [user_id])
+  OrganizationType OrganizationType? @relation(fields: [org_type_id], references: [id])
+  job              job[]
+  people           people[]
+  processes        process[]
+  task             task[]
+  employees        user[]            @relation("UserCompany")
 
   @@index([created_by], map: "company_created_by_fkey")
+  @@index([org_type_id], map: "company_org_type_id_fkey")
 }
 
 model people {
@@ -318,6 +325,13 @@ model Function {
 
   @@index([company_id], map: "Function_company_id_fkey")
   @@index([parent_function_id], map: "Function_parent_function_id_fkey")
+}
+
+model OrganizationType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  company     company[]
 }
 
 enum CellType {
