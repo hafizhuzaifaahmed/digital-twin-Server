@@ -37,6 +37,13 @@ model role {
   users       user[]
 }
 
+model OrganizationType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  companies   company[]
+}
+
 /// ///////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////
 model company {

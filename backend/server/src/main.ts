@@ -9,10 +9,14 @@ async function bootstrap() {
   // Enable CORS
   const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:8000',
     'https://fyp-cms-frontend.vercel.app',
     'https://abdullahfahmi.itch.io',
     'https://html-classic.itch.zone',
     'https://crystalsystem-3dapp-production.up.railway.app',
+    'https://crystalsytem-3dapp-test.up.railway.app',
+    'https://crystalsystemcms-production.up.railway.app',
+    'https://crystalsystemcms-testing-e377.up.railway.app'
   ];
   
   app.enableCors({

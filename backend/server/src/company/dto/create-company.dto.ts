@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCompanyDto {
   @IsString()
@@ -11,4 +11,8 @@ export class CreateCompanyDto {
 
   @IsInt()
   created_by!: number;
+
+  @IsOptional()
+  @IsInt()
+  org_type_id?: number;
 }

@@ -12,4 +12,8 @@ export class UpdateCompanyDto {
   @IsOptional()
   @IsInt()
   created_by?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  org_type_id?: number | null;
 }
