@@ -10,24 +10,45 @@ datasource db {
 /// ///////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////
 model user {
-  user_id          Int       @id @default(autoincrement())
-  email            String    @unique
+  user_id          Int         @id @default(autoincrement())
+  email            String      @unique
   password         String
   name             String
   role_id          Int
   company_id       Int?
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
   created_by       Int?
-  createdCompanies company[] @relation("CompanyCreator")
-  company          company?  @relation("UserCompany", fields: [company_id], references: [company_id])
-  creator          user?     @relation("UserCreator", fields: [created_by], references: [user_id])
-  createdUsers     user[]    @relation("UserCreator")
-  role             role      @relation(fields: [role_id], references: [role_id])
+  createdCompanies company[]   @relation("CompanyCreator")
+  company          company?    @relation("UserCompany", fields: [company_id], references: [company_id])
+  creator          user?       @relation("UserCreator", fields: [created_by], references: [user_id])
+  createdUsers     user[]      @relation("UserCreator")
+  role             role        @relation(fields: [role_id], references: [role_id])
+  created3DUsers   users_3d[]  @relation("User3DCreator")
+  updated3DUsers   users_3d[]  @relation("User3DUpdater")
 
   @@index([company_id], map: "user_company_id_fkey")
   @@index([role_id], map: "user_role_id_fkey")
   @@index([created_by], map: "user_created_by_fkey")
+}
+
+model users_3d {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String   @unique
+  company_id  Int
+  password    String
+  created_at  DateTime @default(now())
+  created_by  Int
+  updated_at  DateTime @updatedAt
+  updated_by  Int?
+  company     company  @relation("Users3DCompany", fields: [company_id], references: [company_id])
+  creator     user     @relation("User3DCreator", fields: [created_by], references: [user_id])
+  updater     user?    @relation("User3DUpdater", fields: [updated_by], references: [user_id])
+
+  @@index([company_id], map: "users_3d_company_id_fkey")
+  @@index([created_by], map: "users_3d_created_by_fkey")
+  @@index([updated_by], map: "users_3d_updated_by_fkey")
 }
 
 model role {
@@ -63,6 +84,7 @@ model company {
   processes        process[]
   task             task[]
   employees        user[]            @relation("UserCompany")
+  users_3d         users_3d[]        @relation("Users3DCompany")
 
   @@index([created_by], map: "company_created_by_fkey")
   @@index([org_type_id], map: "company_org_type_id_fkey")
