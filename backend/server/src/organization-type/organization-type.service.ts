@@ -26,9 +26,7 @@ export class OrganizationTypeService {
   async findAll() {
     return this.prisma.organizationType.findMany({
       include: {
-        _count: {
-          select: { companies: true },
-        },
+        _count: true,
       },
     });
   }
@@ -37,9 +35,7 @@ export class OrganizationTypeService {
     const orgType = await this.prisma.organizationType.findUnique({
       where: { id },
       include: {
-        _count: {
-          select: { companies: true },
-        },
+        _count: true,
       },
     });
     if (!orgType) {
