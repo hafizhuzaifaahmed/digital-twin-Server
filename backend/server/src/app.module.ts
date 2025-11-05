@@ -20,6 +20,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { ImportModule } from './import & export/import.module';
+import { Users3dModule } from './users-3d/users-3d.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ImportModule } from './import & export/import.module';
     TaskModule,
     PeopleModule,
     UserModule,
+    Users3dModule,
     RoleModule,
     SkillModule,
     AuthModule,

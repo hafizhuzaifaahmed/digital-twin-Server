@@ -1,12 +1,15 @@
-import { IsInt, IsOptional, IsString, IsEmail, MinLength, ValidateIf } from 'class-validator';
+import { IsInt, IsString, IsEmail, MinLength } from 'class-validator';
 import { Match } from '../../common/validators/match.decorator';
 
-export class CreateUserDto {
+export class CreateUser3dDto {
+  @IsString()
+  name!: string;
+
   @IsEmail()
   email!: string;
 
-  @IsString()
-  name!: string;
+  @IsInt()
+  company_id!: number;
 
   @IsString()
   @MinLength(6)
@@ -18,13 +21,5 @@ export class CreateUserDto {
   confirmPassword!: string;
 
   @IsInt()
-  role_id!: number;
-
-  @IsOptional()
-  @IsInt()
-  company_id?: number | null;
-
-  @IsOptional()
-  @IsInt()
-  created_by?: number | null;
+  created_by!: number;
 }
