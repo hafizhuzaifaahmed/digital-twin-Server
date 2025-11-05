@@ -16,20 +16,20 @@ export class CompanyService {
     };
     return this.prisma.company.create({
       data,
-      include: { organizationType: true },
+      include: { OrganizationType: true },
     });
   }
 
   async findAll() {
     return this.prisma.company.findMany({
-      include: { organizationType: true },
+      include: { OrganizationType: true },
     });
   }
 
   async findOne(company_id: number) {
     const company = await this.prisma.company.findUnique({
       where: { company_id },
-      include: { organizationType: true },
+      include: { OrganizationType: true },
     });
     if (!company) throw new NotFoundException(`Company ${company_id} not found`);
     return company;
@@ -38,7 +38,7 @@ export class CompanyService {
   async findAllWithRelations() {
     return this.prisma.company.findMany({
       include: {
-        organizationType: true,
+        OrganizationType: true,
         people: true,
         buildings: {
           include: {
@@ -61,7 +61,7 @@ export class CompanyService {
     const company = await this.prisma.company.findUnique({
       where: { company_id },
       include: {
-        organizationType: true,
+        OrganizationType: true,
         people: true,
         buildings: {
           include: {
@@ -93,7 +93,7 @@ export class CompanyService {
       return await this.prisma.company.update({
         where: { company_id },
         data,
-        include: { organizationType: true },
+        include: { OrganizationType: true },
       });
     } catch (e: any) {
       if (e?.code === 'P2025') throw new NotFoundException(`Company ${company_id} not found`);

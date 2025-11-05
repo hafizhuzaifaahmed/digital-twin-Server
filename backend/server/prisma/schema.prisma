@@ -78,7 +78,7 @@ model company {
   Function         Function[]
   buildings        building[]
   creator          user              @relation("CompanyCreator", fields: [created_by], references: [user_id])
-  organizationType OrganizationType? @relation(fields: [org_type_id], references: [id])
+  OrganizationType OrganizationType? @relation(fields: [org_type_id], references: [id])
   job              job[]
   people           people[]
   processes        process[]
