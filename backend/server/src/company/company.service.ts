@@ -12,7 +12,7 @@ export class CompanyService {
       companyCode: dto.companyCode,
       name: dto.name,
       created_by: dto.created_by,
-      organizationTypeId: dto.org_type_id ?? 1, // Default to Functional (ID: 1)
+      org_type_id: dto.org_type_id ?? 1, // Default to Functional (ID: 1)
     };
     return this.prisma.company.create({
       data,
@@ -87,7 +87,7 @@ export class CompanyService {
       companyCode: dto.companyCode ?? undefined,
       name: dto.name ?? undefined,
       created_by: dto.created_by ?? undefined,
-      organizationTypeId: dto.org_type_id ?? undefined,
+      org_type_id: dto.org_type_id ?? undefined,
     };
     try {
       return await this.prisma.company.update({

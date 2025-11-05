@@ -16,6 +16,7 @@ export class UserService {
       password: hashed ?? undefined,
       role_id: dto.role_id ?? undefined,
       company_id: dto.company_id ?? undefined,
+      created_by: dto.created_by ?? undefined,
     };
     try {
       return await this.prisma.user.create({ data });
