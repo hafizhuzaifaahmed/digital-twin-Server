@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Post, Body, Query } from '@nestjs/common';
 import { HierarchicalViewService } from './hierarchical-view.service';
 import { UserIdsDto } from './dto/hierarchical-dto';
 import { BatchProcessResult } from './dto/hierarchical-types';
@@ -16,7 +16,14 @@ export class HierarchicalViewController {
   getBuildingHierarchy(@Param('userId', ParseIntPipe) userId: number) {
     return this.hierarchicalViewService.getBuildingData(userId);
   }
-
+  @Get('relation/CreatedBy/:userId')
+  getCreatedByUser(@Param('userId', ParseIntPipe) userId: number) {
+    return this.hierarchicalViewService.getUserByCreatedBy(userId);
+  }
+  @Get('relation/3D/:userId')
+  get3DUserHierarchy(@Param('userId', ParseIntPipe) userId: number) {
+    return this.hierarchicalViewService.getUserByCreatedBy3DUser(userId);
+  }
   @Post('relation/bulk')
   getUserHierarchyBulk(@Body('userIds') userIds: number[]): Promise<BatchProcessResult> {
     return this.hierarchicalViewService.getUserHierarchyByUserIds(userIds);
@@ -52,4 +59,10 @@ export class HierarchicalViewController {
   getFloorHierarchyBulk(@Body() dto: UserIdsDto): Promise<BatchProcessResult> {
     return this.hierarchicalViewService.getFloorDataByUserIds(dto.userIds);
   }
+
+  @Post('relation/room/bulk')
+  getRoomHierarchyBulk(@Body() dto: UserIdsDto): Promise<BatchProcessResult> {
+    return this.hierarchicalViewService.getRoomHierarchyByUserIds(dto.userIds);
+  }
+
 }
