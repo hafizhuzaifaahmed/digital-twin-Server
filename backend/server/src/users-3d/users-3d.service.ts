@@ -109,14 +109,13 @@ export class Users3dService {
       email: dto.email ?? undefined,
       company_id: dto.company_id ?? undefined,
       password: hashed ?? undefined,
-      updated_by: dto.updated_by,
     };
     try {
       return await this.prisma.users_3d.update({ where: { id }, data });
     } catch (e: any) {
       if (e?.code === 'P2025') throw new NotFoundException(`3D User ${id} not found`);
       if (e?.code === 'P2002') throw new BadRequestException('Email already exists');
-      if (e?.code === 'P2003') throw new BadRequestException('Invalid company_id or updated_by');
+      if (e?.code === 'P2003') throw new BadRequestException('Invalid company_id');
       throw e;
     }
   }
