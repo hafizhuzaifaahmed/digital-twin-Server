@@ -1,5 +1,5 @@
 import { IsArray, IsInt } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class UserIdsDto {
     @IsArray()
@@ -7,3 +7,5 @@ export class UserIdsDto {
     @Type(() => Number)
     userIds: number[];
 }
+
+

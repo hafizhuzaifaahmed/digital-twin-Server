@@ -339,4 +339,57 @@ export class HierarchicalViewService {
         return companies;
     }
 
+    async getRoomHierarchyByUserIds(userIds: number[]) {
+        return this.processMultipleUsers(userIds, async (userId) => {
+            const user = await this.getValidatedUser(userId);
+            const associatedCompaniesBuildings = user.company_id
+                ? await this.getBuildingDataByCompanyId(user.company_id)
+                : [];
+            const associatedfloors = await this.getFloorDataByBuildingIds(associatedCompaniesBuildings.map(b => b.building_id));
+
+            const associatedRooms = await this.getRoomDataByFloorIds(associatedfloors.map(f => f.floor_id));
+            const createdCompanies = await this.getCompanyCreatedByUser(userId);
+            const createdCompaniesBuildings = await Promise.all(
+                createdCompanies.map((company) =>
+                    this.getBuildingDataByCompanyId(company.company_id)
+                )
+            );
+            const createdfloors = await this.getFloorDataByBuildingIds(createdCompaniesBuildings.flat().map(b => b.building_id));
+            const createdRooms = await this.getRoomDataByFloorIds(createdfloors.map(f => f.floor_id));
+
+            return {
+
+                associatedRooms,
+                createdRooms
+            };
+        });
+
+    }
+
+
+    async getUserByCreatedBy(userId: number) {
+        const users = await this.prisma.user.findMany({
+            where: { created_by: userId },
+        });
+        return {
+            message: 'User Created by ' + userId,
+            users
+        };
+    }
+
+    async getUserByCreatedBy3DUser(userId: number) {
+        const users = await this.prisma.users_3d.findMany({
+            where: { created_by: userId },
+        });
+        return {
+            message: ' For 3D User Created by ' + userId,
+            users
+        };
+    }
+
+    getRoomDataByFloorIds(floorIds: number[]) {
+        return this.prisma.room.findMany({
+            where: { floor_id: { in: floorIds } },
+        });
+    }
 }
