@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Put, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Users3dService } from './users-3d.service';
 import { CreateUser3dDto } from './dto/create-user-3d.dto';
@@ -34,7 +34,7 @@ export class Users3dController {
     return this.users3dService.findOne(id);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @ApiOperation({ summary: 'Update a 3D user' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUser3dDto) {
     return this.users3dService.update(id, dto);
