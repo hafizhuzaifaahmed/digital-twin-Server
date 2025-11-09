@@ -387,6 +387,40 @@ export class HierarchicalViewService {
         };
     }
 
+
+    async getPeopleDataByUserIds(userIds: number[]) {
+        return this.processMultipleUsers(userIds, async (userId) => {
+            const user = await this.getValidatedUser(userId);
+            const associatedCompanyData = user.company_id
+                ? await this.getCompanyData(user.company_id)
+                : null;
+
+            const assoiatedPeople = this.prisma.people.findMany({ where: { company_id: associatedCompanyData?.company_id } });
+
+            const createdCompanies = await this.getCompanyCreatedByUser(userId);
+            const createdPeopleArrays = await Promise.all(
+                createdCompanies.map((company) =>
+                    this.prisma.people.findMany({ where: { company_id: company.company_id } })
+                )
+            );
+            const createdPeople = createdPeopleArrays.flat();
+
+            return {
+                user,
+                associatedPeople: assoiatedPeople,
+                createdPeople: createdPeople
+            };
+        });
+
+
+    }
+
+
+    getPeopleDataByCompanyIds(companyIds: number[]) {
+        return this.prisma.people.findMany({
+            where: { company_id: { in: companyIds } },
+        });
+    }
     getRoomDataByFloorIds(floorIds: number[]) {
         return this.prisma.room.findMany({
             where: { floor_id: { in: floorIds } },

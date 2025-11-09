@@ -65,4 +65,9 @@ export class HierarchicalViewController {
     return this.hierarchicalViewService.getRoomHierarchyByUserIds(dto.userIds);
   }
 
+  @Post('relation/people/bulk')
+  getPeopleHierarchyBulk(@Body() dto: UserIdsDto): Promise<BatchProcessResult> {
+    return this.hierarchicalViewService.getPeopleDataByUserIds(dto.userIds);
+  }
+
 }
