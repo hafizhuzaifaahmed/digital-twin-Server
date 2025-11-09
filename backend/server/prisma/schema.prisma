@@ -18,14 +18,18 @@ model user {
   company_id       Int?
   created_at       DateTime   @default(now())
   updated_at       DateTime   @updatedAt
+  created_by       Int?
   createdCompanies company[]  @relation("CompanyCreator")
   company          company?   @relation("UserCompany", fields: [company_id], references: [company_id])
+  user             user?      @relation("userTouser", fields: [created_by], references: [user_id])
+  other_user       user[]     @relation("userTouser")
   role             role       @relation(fields: [role_id], references: [role_id])
   created3DUsers   users_3d[] @relation("User3DCreator")
   updated3DUsers   users_3d[] @relation("User3DUpdater")
 
   @@index([company_id], map: "user_company_id_fkey")
   @@index([role_id], map: "user_role_id_fkey")
+  @@index([created_by], map: "user_created_by_fkey")
 }
 
 model users_3d {
