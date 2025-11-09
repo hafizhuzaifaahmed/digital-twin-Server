@@ -69,5 +69,8 @@ export class HierarchicalViewController {
   getPeopleHierarchyBulk(@Body() dto: UserIdsDto): Promise<BatchProcessResult> {
     return this.hierarchicalViewService.getPeopleDataByUserIds(dto.userIds);
   }
-
+  @Get('createAdminUser/:userId')
+  createAdminUser(@Param('userId', ParseIntPipe) userId: number) {
+    return this.hierarchicalViewService.getUserHierarchyByCreator(userId);
+  }
 }

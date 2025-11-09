@@ -395,7 +395,7 @@ export class HierarchicalViewService {
                 ? await this.getCompanyData(user.company_id)
                 : null;
 
-            const assoiatedPeople = this.prisma.people.findMany({ where: { company_id: associatedCompanyData?.company_id } });
+            const associatedPeople = await this.prisma.people.findMany({ where: { company_id: associatedCompanyData?.company_id } });
 
             const createdCompanies = await this.getCompanyCreatedByUser(userId);
             const createdPeopleArrays = await Promise.all(
@@ -406,8 +406,9 @@ export class HierarchicalViewService {
             const createdPeople = createdPeopleArrays.flat();
 
             return {
-                user,
-                associatedPeople: assoiatedPeople,
+                userId,
+                userName: user.company_id,
+                associatedPeople: associatedPeople,
                 createdPeople: createdPeople
             };
         });
@@ -416,14 +417,73 @@ export class HierarchicalViewService {
     }
 
 
-    getPeopleDataByCompanyIds(companyIds: number[]) {
+
+
+    async getUserHierarchyByCreator(userId: number) {
+        // ✅ Get the base user info
+        const user = await this.prisma.user.findUnique({
+            where: { user_id: userId },
+            select: {
+                user_id: true,
+                name: true,
+                email: true,
+            },
+        });
+
+        if (!user) return null;
+
+        // ✅ Recursively get all users created by this user
+        const createdUsers = await this.getChildrenUsers(userId);
+
+        return {
+            userId: user.user_id,
+            name: user.name,
+            createdUsers,
+        };
+    }
+
+
+    async getChildrenUsers(userId: number) {
+        const children = await this.prisma.user.findMany({
+            where: { created_by: userId },
+            select: {
+                user_id: true,
+                name: true,
+                email: true,
+            },
+        });
+
+        // Recursive fetch
+        const withSubChildren = await Promise.all(
+            children.map(async (child) => ({
+                ...child,
+                createdUsers: await this.getChildrenUsers(child.user_id),
+            }))
+        );
+
+        return withSubChildren;
+    }
+
+    async getPeopleDataByCompanyIds(companyIds: number[]) {
         return this.prisma.people.findMany({
             where: { company_id: { in: companyIds } },
         });
     }
+
+
+    async getUserCreatedByAdminUsers(userId: number) {
+
+
+
+    }
+
     getRoomDataByFloorIds(floorIds: number[]) {
         return this.prisma.room.findMany({
             where: { floor_id: { in: floorIds } },
         });
     }
+
+
+
+
 }
