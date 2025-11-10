@@ -6,12 +6,12 @@ import * as bcrypt from 'bcrypt';
 export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async seedSuperAdmin() {
     try {
       this.logger.log('Starting SUPER_ADMIN seeding process...');
-      
+
       // Test database connection first
       await this.prisma.$queryRaw`SELECT 1`;
       this.logger.log('Database connection verified');
@@ -19,13 +19,13 @@ export class SeedService {
       // Ensure SUPER_ADMIN role exists
       this.logger.log('Checking for SUPER_ADMIN role...');
       let role = await this.prisma.role.findFirst({ where: { name: 'SUPER_ADMIN' } });
-      
+
       if (!role) {
         this.logger.log('Creating SUPER_ADMIN role...');
-        role = await this.prisma.role.create({ 
-          data: { 
+        role = await this.prisma.role.create({
+          data: {
             name: 'SUPER_ADMIN'
-          } 
+          }
         });
         this.logger.log('Created SUPER_ADMIN role');
       } else {
@@ -38,11 +38,11 @@ export class SeedService {
 
       this.logger.log(`Checking for existing user with email: ${email}`);
       const existing = await this.prisma.user.findFirst({ where: { email } });
-      
+
       if (!existing) {
         this.logger.log('Creating SUPER_ADMIN user...');
         const hashed = await bcrypt.hash(password, 10);
-        
+
         await this.prisma.user.create({
           data: {
             email,
@@ -55,7 +55,7 @@ export class SeedService {
       } else {
         this.logger.log(`SUPER_ADMIN user already exists (${email})`);
       }
-      
+
       this.logger.log('SUPER_ADMIN seeding process completed successfully');
     } catch (error) {
       this.logger.error('Error during SUPER_ADMIN seeding:', error.message);

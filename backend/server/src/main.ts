@@ -5,7 +5,7 @@ import { SeedService } from './auth/seed.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  
+
   try {
     logger.log('Creating NestJS application...');
     const app = await NestFactory.create(AppModule);
@@ -57,7 +57,7 @@ async function bootstrap() {
       const seeder = app.get(SeedService);
       await Promise.race([
         seeder.seedSuperAdmin(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Seeding timeout')), 30000)
         )
       ]);
