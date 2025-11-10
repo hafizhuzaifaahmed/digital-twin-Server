@@ -169,16 +169,19 @@ export class ImportController {
     },
   })
   async exportExcel(
-    @Body('ids') processIds: number[],
+    @Body('ids') processIds: number | number[],
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    if (!processIds || processIds.length === 0) {
+    // Normalize processIds to always be an array
+    const idsArray = Array.isArray(processIds) ? processIds : [processIds];
+    
+    if (!idsArray || idsArray.length === 0) {
       throw new BadRequestException('Process IDs array is required');
     }
 
     try {
       // Export data to Excel buffer
-      const excelBuffer = await this.exportService.exportToExcel(processIds);
+      const excelBuffer = await this.exportService.exportToExcel(idsArray);
 
       // Set response headers for file download
       const fileName = `processes_export_${new Date().toISOString().split('T')[0]}.xlsx`;

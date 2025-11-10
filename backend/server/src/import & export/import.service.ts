@@ -807,6 +807,13 @@ export class ImportService {
     for (let i = 0; i < jobTasks.length; i++) {
       const row = jobTasks[i];
       try {
+        // Skip rows with empty TaskCode or JobCode
+        if (!row['TaskCode'] || row['TaskCode'].trim() === '' || 
+            !row['JobCode'] || row['JobCode'].trim() === '') {
+          detail.skipped++;
+          continue;
+        }
+
         // Find job - use transaction to find records created in this transaction
         const job = await tx.job.findUnique({
           where: { jobCode: row['JobCode'] },
