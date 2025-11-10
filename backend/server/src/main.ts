@@ -5,7 +5,7 @@ import { SeedService } from './auth/seed.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Enable CORS
   const allowedOrigins = [
     'http://localhost:3000',
@@ -18,7 +18,7 @@ async function bootstrap() {
     'https://crystalsystemcms-production.up.railway.app',
     'https://crystalsystemcms-testing-e377.up.railway.app'
   ];
-  
+
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -31,7 +31,7 @@ async function bootstrap() {
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',
   });
-  
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -40,11 +40,11 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  
+
   // Seed SUPER_ADMIN role and user
   const seeder = app.get(SeedService);
   await seeder.seedSuperAdmin();
-  
-  await app.listen(process.env.PORT ?? 3001);
+
+  await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
 }
 bootstrap();
