@@ -5,7 +5,7 @@ import { UpdateFunctionDto } from './dto/update-function.dto';
 
 @Injectable()
 export class FunctionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateFunctionDto) {
     const data: any = {
@@ -126,5 +126,9 @@ export class FunctionService {
       if (e?.code === 'P2025') throw new NotFoundException(`Function ${function_id} not found`);
       throw e;
     }
+  }
+
+  async countFunctions() {
+    return await (this.prisma as any).function.count();
   }
 }

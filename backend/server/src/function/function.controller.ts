@@ -5,7 +5,7 @@ import { UpdateFunctionDto } from './dto/update-function.dto';
 
 @Controller('function')
 export class FunctionController {
-  constructor(private readonly functionService: FunctionService) {}
+  constructor(private readonly functionService: FunctionService) { }
 
   @Post()
   create(@Body() dto: CreateFunctionDto) {
@@ -40,5 +40,10 @@ export class FunctionController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.functionService.remove(id);
+  }
+
+  @Get('/count/functions')
+  countFunctions() {
+    return this.functionService.countFunctions();
   }
 }
