@@ -33,12 +33,18 @@ class RegisterDto {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto.email, dto.password);
+  }
+
+  @Public()
+  @Post('login-3d')
+  async login3dUser(@Body() dto: LoginDto) {
+    return this.authService.login3dUser(dto.email, dto.password);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
