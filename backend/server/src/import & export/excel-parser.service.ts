@@ -74,9 +74,17 @@ export class ExcelParserService {
       for (const key in row) {
         // Trim whitespace from column names
         const cleanKey = key.trim();
-        // Also trim whitespace from values
-        const value = row[key];
-        cleanedRow[cleanKey] = typeof value === 'string' ? value.trim() : value;
+        // Get the value and ensure it's a string for code fields
+        let value = row[key];
+        
+        // Convert all values to strings and trim whitespace
+        if (value !== null && value !== undefined) {
+          value = String(value).trim();
+        } else {
+          value = '';
+        }
+        
+        cleanedRow[cleanKey] = value;
       }
       return cleanedRow;
     });
