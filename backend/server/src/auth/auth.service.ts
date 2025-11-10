@@ -8,7 +8,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async validateUserByIdentifier(identifier: string, password: string) {
     // Identifier is email in the new schema
@@ -24,6 +24,37 @@ export class AuthService {
 
     return user;
   }
+
+
+
+  async validate3dUserByIdentifier(identifier: string, password: string) {
+    // Identifier is email in the new schema
+    const user3D = await this.prisma.users_3d.findFirst({
+      where: { email: identifier },
+    });
+
+
+
+    if (!user3D) throw new NotFoundException('Invalid email or password');
+    const ok = await bcrypt.compare(password, user3D.password);
+    if (!ok) throw new UnauthorizedException('Invalid password and email');
+    return user3D;
+  }
+
+
+  async login3dUser(identifier: string, password: string) {
+    const user3D = await this.validate3dUserByIdentifier(identifier, password);
+
+    const payload = {
+      sub: user3D.id,
+      email: user3D.email,
+      name: user3D.name,
+    };
+    const access_token = await this.jwtService.signAsync(payload);
+    return { access_token, user: { user_3d_id: user3D.id, email: user3D.email, name: user3D.name } };
+
+  }
+
 
   async login(identifier: string, password: string) {
     const user = await this.validateUserByIdentifier(identifier, password);
