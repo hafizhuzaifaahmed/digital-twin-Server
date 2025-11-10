@@ -118,6 +118,7 @@ export class ImportService {
             skipped: 0,
             failed: 1,
             errors: [{ row: 0, error: error.message }],
+            skippedRows: [],
           };
         }
       }
@@ -191,6 +192,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < companies.length; i++) {
@@ -203,6 +205,10 @@ export class ImportService {
 
         if (existing) {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Company already exists',
+          });
           continue;
         }
 
@@ -271,6 +277,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < functions.length; i++) {
@@ -283,6 +290,10 @@ export class ImportService {
 
         if (existing) {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Function already exists',
+          });
           continue;
         }
 
@@ -343,6 +354,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < jobs.length; i++) {
@@ -499,6 +511,10 @@ export class ImportService {
           detail.imported++;
         } else {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Job already exists',
+          });
         }
       } catch (error) {
         detail.failed++;
@@ -524,6 +540,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < tasks.length; i++) {
@@ -642,6 +659,10 @@ export class ImportService {
           detail.imported++;
         } else {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Task already exists',
+          });
         }
       } catch (error) {
         detail.failed++;
@@ -667,6 +688,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < processes.length; i++) {
@@ -679,6 +701,10 @@ export class ImportService {
 
         if (existing) {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Process already exists',
+          });
           continue;
         }
 
@@ -726,6 +752,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < taskProcesses.length; i++) {
@@ -739,6 +766,10 @@ export class ImportService {
         if (!task) {
           console.warn(`Task "${row['TaskCode']}" not found - skipping relationship`);
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: `Task "${row['TaskCode']}" not found`,
+          });
           continue;
         }
 
@@ -750,6 +781,10 @@ export class ImportService {
         if (!process) {
           console.warn(`Process "${row['ProcessCode']}" not found - skipping relationship`);
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: `Process "${row['ProcessCode']}" not found`,
+          });
           continue;
         }
 
@@ -765,6 +800,10 @@ export class ImportService {
 
         if (existing) {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Task-Process relationship already exists',
+          });
           continue;
         }
 
@@ -802,6 +841,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < jobTasks.length; i++) {
@@ -811,6 +851,10 @@ export class ImportService {
         if (!row['TaskCode'] || row['TaskCode'].trim() === '' || 
             !row['JobCode'] || row['JobCode'].trim() === '') {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Empty TaskCode or JobCode',
+          });
           continue;
         }
 
@@ -822,6 +866,10 @@ export class ImportService {
         if (!job) {
           console.warn(`Job "${row['JobCode']}" not found - skipping relationship`);
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: `Job "${row['JobCode']}" not found`,
+          });
           continue;
         }
 
@@ -833,6 +881,10 @@ export class ImportService {
         if (!task) {
           console.warn(`Task "${row['TaskCode']}" not found - skipping relationship`);
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: `Task "${row['TaskCode']}" not found`,
+          });
           continue;
         }
 
@@ -848,6 +900,10 @@ export class ImportService {
 
         if (existing) {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Job-Task relationship already exists',
+          });
           continue;
         }
 
@@ -884,6 +940,7 @@ export class ImportService {
       skipped: 0,
       failed: 0,
       errors: [],
+      skippedRows: [],
     };
 
     for (let i = 0; i < people.length; i++) {
@@ -908,6 +965,10 @@ export class ImportService {
 
         if (existing) {
           detail.skipped++;
+          detail.skippedRows.push({
+            row: i + 2,
+            reason: 'Person already exists (email or phone match)',
+          });
           continue;
         }
 

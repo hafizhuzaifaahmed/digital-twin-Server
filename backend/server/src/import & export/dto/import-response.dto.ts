@@ -3,6 +3,7 @@ export class SheetImportDetail {
   skipped: number;
   failed: number;
   errors: Array<{ row: number; error: string }>;
+  skippedRows: Array<{ row: number; reason: string }>;
 }
 
 export class ImportSummary {
