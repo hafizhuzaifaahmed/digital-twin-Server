@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,6 +27,8 @@ import { HierarchicalViewModule } from './hierarchical-view/hierarchical-view.mo
 
 @Module({
   imports: [
+    // Load environment variables before any module that may use them (Prisma, etc.)
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     CompanyModule,
     BuildingModule,
