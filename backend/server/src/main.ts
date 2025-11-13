@@ -20,7 +20,8 @@ async function bootstrap() {
       'https://crystalsystem-3dapp-production.up.railway.app',
       'https://crystalsytem-3dapp-test.up.railway.app',
       'https://crystalsystemcms-production.up.railway.app',
-      'https://crystalsystemcms-testing-e377.up.railway.app'
+      'https://crystalsystemcms-testing-e377.up.railway.app',
+      'https://crystalsystemcms-development.up.railway.app'
     ];
 
     app.enableCors({
