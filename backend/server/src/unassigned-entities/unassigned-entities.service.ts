@@ -11,16 +11,37 @@ export class UnassignedEntitiesService {
         return this.prisma.process.findMany({
             where: {
                 task_task_task_process_idToprocess: {
-                    none: {},
+                    none: {}, // filters processes with zero tasks
+                },
+            },
+            select: {
+                process_id: true,
+                process_name: true,
+                process_code: true,
+                company: {
+                    select: {
+                        name: true,
+                    },
                 },
             },
         });
     }
 
+
     async getTaskWithoutProcesses() {
         return this.prisma.task.findMany({
             where: {
                 process_task_task_process_idToprocess: null, // <-- singular relation, check for null
+            },
+            select: {
+                task_id: true,
+                task_name: true,
+                task_code: true,
+                company: {
+                    select: {
+                        name: true,
+                    },
+                },
             },
         });
     }
@@ -32,6 +53,21 @@ export class UnassignedEntitiesService {
                     none: {},
                 },
             },
+            select: {
+                job_id: true,
+                jobCode: true,
+                name: true,
+                company: {
+                    select: {
+                        name: true,
+                    },
+                },
+                Function: {
+                    select: {
+                        name: true,
+                    },
+                },
+            },
         });
     }
 
@@ -39,11 +75,26 @@ export class UnassignedEntitiesService {
         return this.prisma.job.findMany({
             where: {
                 table_job: {
-                    none: {}, // <-- filters jobs with zero table_job entries
+                    none: {},
+                },
+            },
+            select: {
+                job_id: true,
+                jobCode: true,
+                company: {
+                    select: {
+                        name: true,
+                    },
+                },
+                Function: {
+                    select: {
+                        name: true,
+                    },
                 },
             },
         });
     }
+
 
 }
 
