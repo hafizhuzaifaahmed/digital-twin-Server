@@ -20,7 +20,7 @@ model user {
   updated_at       DateTime   @updatedAt
   created_by       Int?
   createdCompanies company[]  @relation("CompanyCreator")
-  company          company?   @relation("UserCompany", fields: [company_id], references: [company_id])
+  company          company?   @relation("UserCompany", fields: [company_id], references: [company_id], onDelete: Cascade)
   user             user?      @relation("userTouser", fields: [created_by], references: [user_id])
   other_user       user[]     @relation("userTouser")
   role             role       @relation(fields: [role_id], references: [role_id])
@@ -42,7 +42,7 @@ model users_3d {
   created_by Int
   updated_at DateTime @updatedAt
   updated_by Int?
-  company    company  @relation("Users3DCompany", fields: [company_id], references: [company_id])
+  company    company  @relation("Users3DCompany", fields: [company_id], references: [company_id], onDelete: Cascade)
   creator    user     @relation("User3DCreator", fields: [created_by], references: [user_id])
   updater    user?    @relation("User3DUpdater", fields: [updated_by], references: [user_id])
 
@@ -101,8 +101,8 @@ model people {
   people_name    String
   people_phone   String?
   people_surname String
-  company        company  @relation(fields: [company_id], references: [company_id])
-  job            job      @relation(fields: [job_id], references: [job_id])
+  company        company  @relation(fields: [company_id], references: [company_id], onDelete: Cascade)
+  job            job      @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
 
   @@index([company_id], map: "people_company_id_fkey")
   @@index([job_id], map: "people_job_id_fkey")
@@ -119,7 +119,7 @@ model building {
   columns       Int             @default(1)
   country       String?
   rows          Int             @default(1)
-  company       company         @relation(fields: [company_id], references: [company_id])
+  company       company         @relation(fields: [company_id], references: [company_id], onDelete: Cascade)
   building_cell building_cell[]
   floor         floor[]
 
@@ -194,7 +194,7 @@ model process {
   process_code                       String         @unique
   process_name                       String
   process_overview                   String         @db.Text
-  company                            company        @relation(fields: [company_id], references: [company_id])
+  company                            company        @relation(fields: [company_id], references: [company_id], onDelete: Cascade)
   process                            process?       @relation("processToprocess", fields: [parent_process_id], references: [process_id])
   other_process                      process[]      @relation("processToprocess")
   task_process_parent_task_idTotask  task?          @relation("process_parent_task_idTotask", fields: [parent_task_id], references: [task_id])
@@ -219,7 +219,7 @@ model task {
   jobTasks                              job_task[]
   process_process_parent_task_idTotask  process[]      @relation("process_parent_task_idTotask")
   process_task                          process_task[]
-  company                               company        @relation(fields: [task_company_id], references: [company_id])
+  company                               company        @relation(fields: [task_company_id], references: [company_id], onDelete: Cascade)
   process_task_task_process_idToprocess process?       @relation("task_task_process_idToprocess", fields: [task_process_id], references: [process_id])
   task_skill                            task_skill[]
 
@@ -240,8 +240,8 @@ model job {
   function_id    Int
   name           String
   overview       String?     @db.Text
-  company        company     @relation(fields: [company_id], references: [company_id])
-  Function       Function    @relation(fields: [function_id], references: [function_id])
+  company        company     @relation(fields: [company_id], references: [company_id], onDelete: Cascade)
+  Function       Function    @relation(fields: [function_id], references: [function_id], onDelete: Cascade)
   job_level      job_level   @relation(fields: [job_level_id], references: [id])
   jobSkills      job_skill[]
   jobTasks       job_task[]
@@ -275,7 +275,7 @@ model job_skill {
   job_id         Int
   skill_id       Int
   skill_level_id Int
-  job            job         @relation(fields: [job_id], references: [job_id])
+  job            job         @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
   skill          skill       @relation(fields: [skill_id], references: [skill_id])
   skill_level    skill_level @relation(fields: [skill_level_id], references: [id])
 
@@ -287,8 +287,8 @@ model job_skill {
 model job_task {
   job_id  Int
   task_id Int
-  job     job  @relation(fields: [job_id], references: [job_id])
-  task    task @relation(fields: [task_id], references: [task_id])
+  job     job  @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+  task    task @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
 
   @@id([job_id, task_id])
   @@index([task_id], map: "job_task_task_id_fkey")
@@ -332,7 +332,7 @@ model task_skill {
   skill_name          String
   skill_level         skill_level @relation(fields: [task_skill_level_id], references: [id])
   skill               skill       @relation(fields: [task_skill_skill_id], references: [skill_id])
-  task                task        @relation(fields: [task_skill_task_id], references: [task_id])
+  task                task        @relation(fields: [task_skill_task_id], references: [task_id], onDelete: Cascade)
 
   @@id([task_skill_task_id, task_skill_skill_id])
   @@index([task_skill_level_id], map: "task_skill_task_skill_level_id_fkey")
@@ -347,7 +347,7 @@ model Function {
   parent_function_id Int?
   backgroundColor    String?
   overview           String?    @db.Text
-  company            company    @relation(fields: [company_id], references: [company_id])
+  company            company    @relation(fields: [company_id], references: [company_id], onDelete: Cascade)
   Function           Function?  @relation("FunctionToFunction", fields: [parent_function_id], references: [function_id])
   other_Function     Function[] @relation("FunctionToFunction")
   job                job[]
