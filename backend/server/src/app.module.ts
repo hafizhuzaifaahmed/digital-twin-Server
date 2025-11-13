@@ -24,6 +24,7 @@ import { ImportModule } from './import & export/import.module';
 import { Users3dModule } from './users-3d/users-3d.module';
 import { OrganizationTypeModule } from './organization-type/organization-type.module';
 import { HierarchicalViewModule } from './hierarchical-view/hierarchical-view.module';
+import { UnassignedEntitiesModule } from './unassigned-entities/unassigned-entities.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { HierarchicalViewModule } from './hierarchical-view/hierarchical-view.mo
     ImportModule,
     OrganizationTypeModule,
     HierarchicalViewModule,
+    UnassignedEntitiesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -56,4 +58,4 @@ import { HierarchicalViewModule } from './hierarchical-view/hierarchical-view.mo
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
-export class AppModule {}
+export class AppModule { }
