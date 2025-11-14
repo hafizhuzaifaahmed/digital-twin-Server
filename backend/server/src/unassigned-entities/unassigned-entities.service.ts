@@ -81,6 +81,7 @@ export class UnassignedEntitiesService {
             select: {
                 job_id: true,
                 jobCode: true,
+                name: true,
                 company: {
                     select: {
                         name: true,
