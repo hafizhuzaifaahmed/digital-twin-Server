@@ -5,7 +5,7 @@ import { UpdateBuildingDto } from './dto/update-building.dto';
 
 @Injectable()
 export class BuildingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateBuildingDto) {
     const data: any = {
@@ -73,6 +73,12 @@ export class BuildingService {
     return building;
   }
 
+  async findByCompany(company_id: number) {
+    return this.prisma.building.findMany({
+      where: { company_id },
+    });
+  }
+
   async findAllWithRelations() {
     return this.prisma.building.findMany({
       include: {
@@ -80,8 +86,8 @@ export class BuildingService {
         floor: {
           include: {
             room: {
-              include: { 
-                table: true 
+              include: {
+                table: true
               },
             },
           },
@@ -98,11 +104,11 @@ export class BuildingService {
       where: { building_id },
       include: {
         company: true,
-        floor: { 
-          include: { 
-            room: { 
-              include: { 
-                table: true 
+        floor: {
+          include: {
+            room: {
+              include: {
+                table: true
               }
             }
           }

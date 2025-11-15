@@ -18,7 +18,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 @ApiTags('tasks')
 @Controller('task')
 export class TaskController {
-  constructor(private readonly taskService: TaskService) {}
+  constructor(private readonly taskService: TaskService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new task with task skills' })
@@ -60,6 +60,11 @@ export class TaskController {
   })
   async create(@Body() createTaskDto: CreateTaskDto): Promise<TaskWithRelations> {
     return this.taskService.create(createTaskDto);
+  }
+
+  @Get('companyId/:company_id')
+  async getTasksByCompany(@Param('company_id', ParseIntPipe) company_id: number): Promise<any> {
+    return this.taskService.taskswithCompany(company_id);
   }
 
   @Get()

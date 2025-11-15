@@ -18,7 +18,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/s
 @ApiTags('processes')
 @Controller('process')
 export class ProcessController {
-  constructor(private readonly processService: ProcessService) {}
+  constructor(private readonly processService: ProcessService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new process with optional workflow' })
@@ -51,8 +51,8 @@ export class ProcessController {
       },
     },
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Process created successfully with calculated capacity.',
   })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed.' })
@@ -63,8 +63,8 @@ export class ProcessController {
 
   @Get()
   @ApiOperation({ summary: 'Get all processes (basic data only)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of processes without relations.',
   })
   findAll() {
@@ -73,8 +73,8 @@ export class ProcessController {
 
   @Get('with-relations')
   @ApiOperation({ summary: 'Get all processes with full relations and workflow' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of processes with company, parent relations, and ordered workflow tasks.',
   })
   findAllWithRelations() {
@@ -83,9 +83,9 @@ export class ProcessController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a process by ID (basic data only)' })
-  @ApiParam({ 
-    name: 'id', 
-    type: 'number', 
+  @ApiParam({
+    name: 'id',
+    type: 'number',
     description: 'Process ID',
     example: 1,
   })
@@ -95,16 +95,21 @@ export class ProcessController {
     return this.processService.findOne(id);
   }
 
+  @Get('companyId/:company_id')
+  findByCompany(@Param('company_id', ParseIntPipe) company_id: number) {
+    return this.processService.processswithCompany(company_id);
+  }
+
   @Get(':id/with-relations')
   @ApiOperation({ summary: 'Get a process by ID with full relations and workflow' })
-  @ApiParam({ 
-    name: 'id', 
-    type: 'number', 
+  @ApiParam({
+    name: 'id',
+    type: 'number',
     description: 'Process ID',
     example: 1,
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Process found with company, parent relations, and ordered workflow tasks.',
   })
   @ApiResponse({ status: 404, description: 'Process not found.' })
@@ -114,9 +119,9 @@ export class ProcessController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a process and optionally replace its workflow' })
-  @ApiParam({ 
-    name: 'id', 
-    type: 'number', 
+  @ApiParam({
+    name: 'id',
+    type: 'number',
     description: 'Process ID',
     example: 1,
   })
@@ -143,8 +148,8 @@ export class ProcessController {
       },
     },
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Process updated successfully with recalculated capacity.',
   })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed.' })
@@ -159,14 +164,14 @@ export class ProcessController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a process and its workflow' })
-  @ApiParam({ 
-    name: 'id', 
-    type: 'number', 
+  @ApiParam({
+    name: 'id',
+    type: 'number',
     description: 'Process ID',
     example: 1,
   })
-  @ApiResponse({ 
-    status: 204, 
+  @ApiResponse({
+    status: 204,
     description: 'Process deleted successfully (cascades to process_task entries).',
   })
   @ApiResponse({ status: 404, description: 'Process not found.' })
@@ -190,4 +195,5 @@ export class ProcessController {
   ) {
     return this.processService.disconnectTask(id, taskid);
   }
+
 }

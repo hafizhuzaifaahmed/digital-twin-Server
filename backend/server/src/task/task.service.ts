@@ -30,7 +30,7 @@ export type TaskWithRelations = Prisma.taskGetPayload<{
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(createTaskDto: CreateTaskDto): Promise<TaskWithRelations> {
     return this.prisma.executeWithRetry(async (prisma) => {
@@ -48,125 +48,125 @@ export class TaskService {
             },
           });
 
-        // Process taskSkills if provided - batch and shorten transaction
-        if (createTaskDto.taskSkills && createTaskDto.taskSkills.length > 0) {
-          const skillsInput = createTaskDto.taskSkills;
-          const skillNames = Array.from(new Set(skillsInput.map((s) => s.skill_name.trim())));
+          // Process taskSkills if provided - batch and shorten transaction
+          if (createTaskDto.taskSkills && createTaskDto.taskSkills.length > 0) {
+            const skillsInput = createTaskDto.taskSkills;
+            const skillNames = Array.from(new Set(skillsInput.map((s) => s.skill_name.trim())));
 
-          // Create or find skills with better error handling
-          const skillMap = new Map<string, number>();
-          
-          for (const skillName of skillNames) {
-            try {
-              // Try to find existing skill first
-              let skill = await tx.skill.findUnique({ where: { name: skillName } });
-              
-              // If not found, create it
-              if (!skill) {
-                skill = await tx.skill.create({ 
-                  data: { name: skillName }
-                });
-              }
-              
-              skillMap.set(skillName, skill.skill_id);
-            } catch (error) {
-              // If creation failed due to unique constraint, try to find it again
-              if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                const existingSkill = await tx.skill.findUnique({ where: { name: skillName } });
-                if (existingSkill) {
-                  skillMap.set(skillName, existingSkill.skill_id);
-                } else {
-                  throw new NotFoundException(`Failed to create or find skill: ${skillName}`);
+            // Create or find skills with better error handling
+            const skillMap = new Map<string, number>();
+
+            for (const skillName of skillNames) {
+              try {
+                // Try to find existing skill first
+                let skill = await tx.skill.findUnique({ where: { name: skillName } });
+
+                // If not found, create it
+                if (!skill) {
+                  skill = await tx.skill.create({
+                    data: { name: skillName }
+                  });
                 }
-              } else {
-                throw error;
+
+                skillMap.set(skillName, skill.skill_id);
+              } catch (error) {
+                // If creation failed due to unique constraint, try to find it again
+                if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                  const existingSkill = await tx.skill.findUnique({ where: { name: skillName } });
+                  if (existingSkill) {
+                    skillMap.set(skillName, existingSkill.skill_id);
+                  } else {
+                    throw new NotFoundException(`Failed to create or find skill: ${skillName}`);
+                  }
+                } else {
+                  throw error;
+                }
               }
             }
-          }
-          
-          // Verify all skills were processed
-          if (skillMap.size !== skillNames.length) {
-            const missing = skillNames.filter(name => !skillMap.has(name));
-            throw new NotFoundException(`Skills not processed: ${missing.join(', ')}`);
+
+            // Verify all skills were processed
+            if (skillMap.size !== skillNames.length) {
+              const missing = skillNames.filter(name => !skillMap.has(name));
+              throw new NotFoundException(`Skills not processed: ${missing.join(', ')}`);
+            }
+
+            // Fetch required skill levels in one query
+            const levelNames = Array.from(new Set(skillsInput.map((s) => s.level)));
+            const levels = await tx.skill_level.findMany({ where: { level_name: { in: levelNames as any } } });
+            if (levels.length !== levelNames.length) {
+              const missing = levelNames.filter((ln) => !levels.some((l) => l.level_name === (ln as any)));
+              throw new NotFoundException(`Skill levels not found: ${missing.join(', ')}`);
+            }
+            const levelMap = new Map(levels.map((l) => [l.level_name, l.id] as const));
+
+            // Build createMany payload with validation
+            const taskSkillRows = skillsInput.map((s) => {
+              const skillName = s.skill_name.trim();
+              const skillId = skillMap.get(skillName);
+              const levelId = levelMap.get(s.level as any);
+
+              if (!skillId) {
+                throw new NotFoundException(`Skill '${skillName}' not found after creation attempt`);
+              }
+              if (!levelId) {
+                throw new NotFoundException(`Skill level '${s.level}' not found`);
+              }
+
+              return {
+                task_skill_task_id: task.task_id,
+                task_skill_skill_id: skillId,
+                task_skill_level_id: levelId,
+                skill_name: skillName,
+              };
+            });
+
+            await tx.task_skill.createMany({ data: taskSkillRows, skipDuplicates: true });
           }
 
-          // Fetch required skill levels in one query
-          const levelNames = Array.from(new Set(skillsInput.map((s) => s.level)));
-          const levels = await tx.skill_level.findMany({ where: { level_name: { in: levelNames as any } } });
-          if (levels.length !== levelNames.length) {
-            const missing = levelNames.filter((ln) => !levels.some((l) => l.level_name === (ln as any)));
-            throw new NotFoundException(`Skill levels not found: ${missing.join(', ')}`);
+          // Process job linking if provided - verify in bulk and createMany
+          if (createTaskDto.job_ids && createTaskDto.job_ids.length > 0) {
+            const jobIds = Array.from(new Set(createTaskDto.job_ids));
+            const existingJobs = await tx.job.findMany({ where: { job_id: { in: jobIds } }, select: { job_id: true } });
+            if (existingJobs.length !== jobIds.length) {
+              const missing = jobIds.filter((id) => !existingJobs.some((j) => j.job_id === id));
+              throw new NotFoundException(`Jobs not found: ${missing.join(', ')}`);
+            }
+            await tx.job_task.createMany({
+              data: jobIds.map((job_id) => ({ job_id, task_id: task.task_id })),
+              skipDuplicates: true,
+            });
           }
-          const levelMap = new Map(levels.map((l) => [l.level_name, l.id] as const));
 
-          // Build createMany payload with validation
-          const taskSkillRows = skillsInput.map((s) => {
-            const skillName = s.skill_name.trim();
-            const skillId = skillMap.get(skillName);
-            const levelId = levelMap.get(s.level as any);
-            
-            if (!skillId) {
-              throw new NotFoundException(`Skill '${skillName}' not found after creation attempt`);
-            }
-            if (!levelId) {
-              throw new NotFoundException(`Skill level '${s.level}' not found`);
-            }
-            
-            return {
-              task_skill_task_id: task.task_id,
-              task_skill_skill_id: skillId,
-              task_skill_level_id: levelId,
-              skill_name: skillName,
-            };
+          // Return the created task with all relations
+          const createdTask = await tx.task.findUnique({
+            where: { task_id: task.task_id },
+            include: {
+              company: true,
+              process_task_task_process_idToprocess: true,
+              process_task: {
+                include: {
+                  process: true,
+                },
+              },
+              jobTasks: {
+                include: {
+                  job: true,
+                },
+              },
+              task_skill: {
+                include: {
+                  skill: true,
+                  skill_level: true,
+                },
+              },
+            },
           });
 
-          await tx.task_skill.createMany({ data: taskSkillRows, skipDuplicates: true });
-        }
-
-        // Process job linking if provided - verify in bulk and createMany
-        if (createTaskDto.job_ids && createTaskDto.job_ids.length > 0) {
-          const jobIds = Array.from(new Set(createTaskDto.job_ids));
-          const existingJobs = await tx.job.findMany({ where: { job_id: { in: jobIds } }, select: { job_id: true } });
-          if (existingJobs.length !== jobIds.length) {
-            const missing = jobIds.filter((id) => !existingJobs.some((j) => j.job_id === id));
-            throw new NotFoundException(`Jobs not found: ${missing.join(', ')}`);
+          if (!createdTask) {
+            throw new NotFoundException('Failed to retrieve created task');
           }
-          await tx.job_task.createMany({
-            data: jobIds.map((job_id) => ({ job_id, task_id: task.task_id })),
-            skipDuplicates: true,
-          });
-        }
 
-        // Return the created task with all relations
-        const createdTask = await tx.task.findUnique({
-          where: { task_id: task.task_id },
-          include: {
-            company: true,
-            process_task_task_process_idToprocess: true,
-            process_task: {
-              include: {
-                process: true,
-              },
-            },
-            jobTasks: {
-              include: {
-                job: true,
-              },
-            },
-            task_skill: {
-              include: {
-                skill: true,
-                skill_level: true,
-              },
-            },
-          },
-        });
-
-        if (!createdTask) {
-          throw new NotFoundException('Failed to retrieve created task');
-        }
-
-        return createdTask;
+          return createdTask;
         } catch (error) {
           if (error instanceof Prisma.PrismaClientKnownRequestError) {
             if (error.code === 'P2002') {
@@ -269,108 +269,108 @@ export class TaskService {
             throw new NotFoundException(`Task with ID ${id} not found`);
           }
 
-        // Optimistic concurrency guard (if provided)
-        if (updateTaskDto.if_match_updated_at) {
-          const clientTs = new Date(updateTaskDto.if_match_updated_at).toISOString();
-          const serverTs = new Date(existingTask.updated_at as any).toISOString();
-          if (clientTs !== serverTs) {
-            throw new ConflictException('Task has been modified by another process');
+          // Optimistic concurrency guard (if provided)
+          if (updateTaskDto.if_match_updated_at) {
+            const clientTs = new Date(updateTaskDto.if_match_updated_at).toISOString();
+            const serverTs = new Date(existingTask.updated_at as any).toISOString();
+            if (clientTs !== serverTs) {
+              throw new ConflictException('Task has been modified by another process');
+            }
           }
-        }
 
-        // Update task fields if provided
-        const updateData: any = {};
-        if (updateTaskDto.task_name !== undefined) updateData.task_name = updateTaskDto.task_name;
-        if (updateTaskDto.task_code !== undefined) updateData.task_code = updateTaskDto.task_code;
-        if (updateTaskDto.task_company_id !== undefined) updateData.task_company_id = updateTaskDto.task_company_id;
-        if (updateTaskDto.task_capacity_minutes !== undefined) updateData.task_capacity_minutes = updateTaskDto.task_capacity_minutes;
-        if (updateTaskDto.task_process_id !== undefined) updateData.task_process_id = updateTaskDto.task_process_id;
-        if (updateTaskDto.task_overview !== undefined) updateData.task_overview = updateTaskDto.task_overview;
+          // Update task fields if provided
+          const updateData: any = {};
+          if (updateTaskDto.task_name !== undefined) updateData.task_name = updateTaskDto.task_name;
+          if (updateTaskDto.task_code !== undefined) updateData.task_code = updateTaskDto.task_code;
+          if (updateTaskDto.task_company_id !== undefined) updateData.task_company_id = updateTaskDto.task_company_id;
+          if (updateTaskDto.task_capacity_minutes !== undefined) updateData.task_capacity_minutes = updateTaskDto.task_capacity_minutes;
+          if (updateTaskDto.task_process_id !== undefined) updateData.task_process_id = updateTaskDto.task_process_id;
+          if (updateTaskDto.task_overview !== undefined) updateData.task_overview = updateTaskDto.task_overview;
 
-        if (Object.keys(updateData).length > 0) {
-          await tx.task.update({
+          if (Object.keys(updateData).length > 0) {
+            await tx.task.update({
+              where: { task_id: id },
+              data: updateData,
+            });
+          }
+
+          // Replace taskSkills atomically if provided
+          if (updateTaskDto.taskSkills !== undefined) {
+            // Delete existing task_skill rows for this task
+            await tx.task_skill.deleteMany({ where: { task_skill_task_id: id } });
+
+            if (updateTaskDto.taskSkills.length > 0) {
+              const skillsInput = updateTaskDto.taskSkills;
+              const skillNames = Array.from(new Set(skillsInput.map((s) => s.skill_name.trim())));
+
+              await tx.skill.createMany({ data: skillNames.map((name) => ({ name })), skipDuplicates: true });
+              const skills = await tx.skill.findMany({ where: { name: { in: skillNames } } });
+              const skillMap = new Map(skills.map((s) => [s.name, s.skill_id] as const));
+
+              const levelNames = Array.from(new Set(skillsInput.map((s) => s.level)));
+              const levels = await tx.skill_level.findMany({ where: { level_name: { in: levelNames as any } } });
+              if (levels.length !== levelNames.length) {
+                const missing = levelNames.filter((ln) => !levels.some((l) => l.level_name === (ln as any)));
+                throw new NotFoundException(`Skill levels not found: ${missing.join(', ')}`);
+              }
+              const levelMap = new Map(levels.map((l) => [l.level_name, l.id] as const));
+
+              const taskSkillRows = skillsInput.map((s) => ({
+                task_skill_task_id: id,
+                task_skill_skill_id: skillMap.get(s.skill_name.trim())!,
+                task_skill_level_id: levelMap.get(s.level as any)!,
+                skill_name: s.skill_name.trim(),
+              }));
+              await tx.task_skill.createMany({ data: taskSkillRows, skipDuplicates: true });
+            }
+          }
+
+          // Replace job links atomically if provided
+          if (updateTaskDto.job_ids !== undefined) {
+            // Delete existing job_task rows for this task
+            await tx.job_task.deleteMany({ where: { task_id: id } });
+
+            if (updateTaskDto.job_ids.length > 0) {
+              const jobIds = Array.from(new Set(updateTaskDto.job_ids));
+              const existingJobs = await tx.job.findMany({ where: { job_id: { in: jobIds } }, select: { job_id: true } });
+              if (existingJobs.length !== jobIds.length) {
+                const missing = jobIds.filter((jid) => !existingJobs.some((j) => j.job_id === jid));
+                throw new NotFoundException(`Jobs not found: ${missing.join(', ')}`);
+              }
+              await tx.job_task.createMany({ data: jobIds.map((job_id) => ({ job_id, task_id: id })) });
+            }
+          }
+
+          // Return the updated task with all relations
+          const updatedTask = await tx.task.findUnique({
             where: { task_id: id },
-            data: updateData,
+            include: {
+              company: true,
+              process_task_task_process_idToprocess: true,
+              process_task: {
+                include: {
+                  process: true,
+                },
+              },
+              jobTasks: {
+                include: {
+                  job: true,
+                },
+              },
+              task_skill: {
+                include: {
+                  skill: true,
+                  skill_level: true,
+                },
+              },
+            },
           });
-        }
 
-        // Replace taskSkills atomically if provided
-        if (updateTaskDto.taskSkills !== undefined) {
-          // Delete existing task_skill rows for this task
-          await tx.task_skill.deleteMany({ where: { task_skill_task_id: id } });
-
-          if (updateTaskDto.taskSkills.length > 0) {
-            const skillsInput = updateTaskDto.taskSkills;
-            const skillNames = Array.from(new Set(skillsInput.map((s) => s.skill_name.trim())));
-
-            await tx.skill.createMany({ data: skillNames.map((name) => ({ name })), skipDuplicates: true });
-            const skills = await tx.skill.findMany({ where: { name: { in: skillNames } } });
-            const skillMap = new Map(skills.map((s) => [s.name, s.skill_id] as const));
-
-            const levelNames = Array.from(new Set(skillsInput.map((s) => s.level)));
-            const levels = await tx.skill_level.findMany({ where: { level_name: { in: levelNames as any } } });
-            if (levels.length !== levelNames.length) {
-              const missing = levelNames.filter((ln) => !levels.some((l) => l.level_name === (ln as any)));
-              throw new NotFoundException(`Skill levels not found: ${missing.join(', ')}`);
-            }
-            const levelMap = new Map(levels.map((l) => [l.level_name, l.id] as const));
-
-            const taskSkillRows = skillsInput.map((s) => ({
-              task_skill_task_id: id,
-              task_skill_skill_id: skillMap.get(s.skill_name.trim())!,
-              task_skill_level_id: levelMap.get(s.level as any)!,
-              skill_name: s.skill_name.trim(),
-            }));
-            await tx.task_skill.createMany({ data: taskSkillRows, skipDuplicates: true });
+          if (!updatedTask) {
+            throw new NotFoundException(`Task with ID ${id} not found after update`);
           }
-        }
 
-        // Replace job links atomically if provided
-        if (updateTaskDto.job_ids !== undefined) {
-          // Delete existing job_task rows for this task
-          await tx.job_task.deleteMany({ where: { task_id: id } });
-
-          if (updateTaskDto.job_ids.length > 0) {
-            const jobIds = Array.from(new Set(updateTaskDto.job_ids));
-            const existingJobs = await tx.job.findMany({ where: { job_id: { in: jobIds } }, select: { job_id: true } });
-            if (existingJobs.length !== jobIds.length) {
-              const missing = jobIds.filter((jid) => !existingJobs.some((j) => j.job_id === jid));
-              throw new NotFoundException(`Jobs not found: ${missing.join(', ')}`);
-            }
-            await tx.job_task.createMany({ data: jobIds.map((job_id) => ({ job_id, task_id: id })) });
-          }
-        }
-
-        // Return the updated task with all relations
-        const updatedTask = await tx.task.findUnique({
-          where: { task_id: id },
-          include: {
-            company: true,
-            process_task_task_process_idToprocess: true,
-            process_task: {
-              include: {
-                process: true,
-              },
-            },
-            jobTasks: {
-              include: {
-                job: true,
-              },
-            },
-            task_skill: {
-              include: {
-                skill: true,
-                skill_level: true,
-              },
-            },
-          },
-        });
-
-        if (!updatedTask) {
-          throw new NotFoundException(`Task with ID ${id} not found after update`);
-        }
-
-        return updatedTask;
+          return updatedTask;
         } catch (error) {
           if (error instanceof Prisma.PrismaClientKnownRequestError) {
             if (error.code === 'P2002') {
@@ -425,6 +425,20 @@ export class TaskService {
           where: { task_id: id },
         });
       });
+    });
+  }
+
+
+  async taskswithCompany(company_id: number): Promise<any> {
+    const company = await this.prisma.company.findUnique({
+      where: { company_id },
+    });
+    if (!company) {
+      throw new NotFoundException(`Company with ID ${company_id} not found`);
+    }
+
+    return this.prisma.task.findMany({
+      where: { task_company_id: company_id },
     });
   }
 }
