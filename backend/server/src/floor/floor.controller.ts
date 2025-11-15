@@ -5,7 +5,7 @@ import { UpdateFloorDto } from './dto/update-floor.dto';
 
 @Controller('floor')
 export class FloorController {
-  constructor(private readonly floorService: FloorService) {}
+  constructor(private readonly floorService: FloorService) { }
 
   @Post()
   create(@Body() dto: CreateFloorDto) {
@@ -15,6 +15,11 @@ export class FloorController {
   @Get()
   findAll() {
     return this.floorService.findAll();
+  }
+
+  @Get('buildingId/:building_id')
+  findFloorsByBuilding(@Param('building_id', ParseIntPipe) building_id: number) {
+    return this.floorService.findFloorsByBuilding(building_id);
   }
 
   @Get('with-relations')

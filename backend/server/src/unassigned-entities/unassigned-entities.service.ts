@@ -21,6 +21,7 @@ export class UnassignedEntitiesService {
                 company: {
                     select: {
                         name: true,
+                        company_id: true,
                     },
                 },
             },
@@ -42,6 +43,7 @@ export class UnassignedEntitiesService {
                 company: {
                     select: {
                         name: true,
+                        company_id: true,
                     },
                 },
             },
@@ -62,11 +64,13 @@ export class UnassignedEntitiesService {
                 company: {
                     select: {
                         name: true,
+                        company_id: true,
                     },
                 },
                 Function: {
                     select: {
                         name: true,
+                        function_id: true,
                     },
                 },
             },
@@ -87,11 +91,13 @@ export class UnassignedEntitiesService {
                 company: {
                     select: {
                         name: true,
+                        company_id: true,
                     },
                 },
                 Function: {
                     select: {
                         name: true,
+                        function_id: true,
                     },
                 },
             },
