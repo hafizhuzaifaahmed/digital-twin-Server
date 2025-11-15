@@ -10,7 +10,7 @@ export class UnassignedEntitiesService {
     async getprocessesWithoutTasks() {
         return this.prisma.process.findMany({
             where: {
-                task_task_task_process_idToprocess: {
+                process_task: {
                     none: {}, // filters processes with zero tasks
                 },
             },
@@ -31,7 +31,9 @@ export class UnassignedEntitiesService {
     async getTaskWithoutProcesses() {
         return this.prisma.task.findMany({
             where: {
-                process_task_task_process_idToprocess: null, // <-- singular relation, check for null
+                process_task: {
+                    none: {}, // filters tasks with zero process associations
+                },
             },
             select: {
                 task_id: true,
@@ -96,7 +98,15 @@ export class UnassignedEntitiesService {
         });
     }
 
-
+    async countjobsWithoutTasks() {
+        return this.prisma.job.count({
+            where: {
+                jobTasks: {
+                    none: {},
+                },
+            },
+        });
+    }
 }
 
 

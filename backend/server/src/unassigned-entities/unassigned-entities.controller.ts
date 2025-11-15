@@ -21,4 +21,8 @@ export class UnassignedEntitiesController {
   async getUnassignedJobsWithoutTable() {
     return this.unassignedEntitiesService.getJobsWithoutTable();
   }
+  @Get('count-unassigned-jobs-without-tasks')
+  async countUnassignedJobsWithoutTasks() {
+    return this.unassignedEntitiesService.countjobsWithoutTasks();
+  }
 }
