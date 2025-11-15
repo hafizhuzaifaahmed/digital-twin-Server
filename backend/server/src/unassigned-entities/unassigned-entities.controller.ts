@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { UnassignedEntitiesService } from './unassigned-entities.service';
 
 @Controller('unassigned-entities')
@@ -24,5 +24,22 @@ export class UnassignedEntitiesController {
   @Get('count-unassigned-jobs-without-tasks')
   async countUnassignedJobsWithoutTasks() {
     return this.unassignedEntitiesService.countjobsWithoutTasks();
+  }
+  @Post('unassigned-processes-without-tasks-by-users')
+  async getUnassignedProcessesToTasksByUsers(@Body() user_ids: number[]) {
+    return this.unassignedEntitiesService.getprocessesWithoutTasksCreateByUsers(user_ids);
+  }
+  @Post('unassigned-tasks-without-processes-by-users')
+  async getUnassignedTasksWithoutProcessesByUsers(@Body() user_ids: number[]) {
+    return this.unassignedEntitiesService.getTaskWithoutProcessesCreateByUsers(user_ids);
+  }
+
+  @Post('unassigned-jobs-without-tasks-by-users')
+  async getUnassignedJobsWithoutTasksByUsers(@Body() user_ids: number[]) {
+    return this.unassignedEntitiesService.getJobsWithoutTasksCreateByUsers(user_ids);
+  }
+  @Post('unassigned-jobs-without-table-by-users')
+  async getUnassignedJobsWithoutTableByUsers(@Body() user_ids: number[]) {
+    return this.unassignedEntitiesService.getJobsWithoutTableCreateByUsers(user_ids);
   }
 }
