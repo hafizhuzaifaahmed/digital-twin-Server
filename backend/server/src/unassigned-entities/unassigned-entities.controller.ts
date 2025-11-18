@@ -43,7 +43,7 @@ export class UnassignedEntitiesController {
   }
 
   @Post('unassigned-jobs-without-table-by-users')
-  async getUnassignedJobsWithoutTableByUsers(@Body() user_ids: number[]) {
+  async getUnassignedJobsWithoutTableByUsers(@Body('user_ids') user_ids: number[]) {
     return this.unassignedEntitiesService.getJobsWithoutTableCreateByUsers(user_ids);
   }
 
