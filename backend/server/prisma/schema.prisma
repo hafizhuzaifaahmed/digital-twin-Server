@@ -200,6 +200,7 @@ model process {
   task_process_parent_task_idTotask  task?          @relation("process_parent_task_idTotask", fields: [parent_task_id], references: [task_id])
   process_task                       process_task[]
   task_task_task_process_idToprocess task[]         @relation("task_task_process_idToprocess")
+  asset_tasks                        asset_task[]
 
   @@index([company_id], map: "process_company_id_fkey")
   @@index([parent_process_id], map: "process_parent_process_id_fkey")
@@ -222,7 +223,7 @@ model task {
   company                               company        @relation(fields: [task_company_id], references: [company_id], onDelete: Cascade)
   process_task_task_process_idToprocess process?       @relation("task_task_process_idToprocess", fields: [task_process_id], references: [process_id])
   task_skill                            task_skill[]
-
+  asset_tasks                           asset_task[]
   @@index([task_company_id], map: "task_task_company_id_fkey")
   @@index([task_process_id], map: "task_task_process_id_fkey")
 }
@@ -355,6 +356,26 @@ model Function {
   @@index([company_id], map: "Function_company_id_fkey")
   @@index([parent_function_id], map: "Function_parent_function_id_fkey")
 }
+
+model asset_task {
+  asset_task_id   Int        @id @default(autoincrement())
+
+  task_id         Int
+  process_id      Int
+
+  type            String     // event / document / information
+  input           Boolean    @default(false)
+  output          Boolean    @default(false)
+  description     String     @db.Text
+  document_link   String?
+
+  task            task        @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+  process         process     @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
+
+  @@index([task_id])
+  @@index([process_id])
+}
+
 
 enum CellType {
   EMPTY
