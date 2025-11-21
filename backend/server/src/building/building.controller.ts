@@ -5,7 +5,7 @@ import { UpdateBuildingDto } from './dto/update-building.dto';
 
 @Controller('building')
 export class BuildingController {
-  constructor(private readonly buildingService: BuildingService) {}
+  constructor(private readonly buildingService: BuildingService) { }
 
   @Post()
   create(@Body() dto: CreateBuildingDto) {
@@ -20,6 +20,11 @@ export class BuildingController {
   @Get('with-relations')
   findAllWithRelations() {
     return this.buildingService.findAllWithRelations();
+  }
+
+  @Get('companyId/:company_id')
+  findByCompany(@Param('company_id', ParseIntPipe) company_id: number) {
+    return this.buildingService.findByCompany(company_id);
   }
 
   @Get(':id')

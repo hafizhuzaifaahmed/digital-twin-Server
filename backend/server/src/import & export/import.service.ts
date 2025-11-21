@@ -286,11 +286,6 @@ export class ImportService {
           continue;
         }
 
-        // Validate Company Code is provided
-        if (!row['Company Code']) {
-          throw new Error(`Function "${row['Function Code']}" is missing Company Code. Please provide a Company Code for this function.`);
-        }
-
         // Get company from the row's Company Code
         const company = await tx.company.findUnique({
           where: { companyCode: row['Company Code'] },
@@ -365,11 +360,6 @@ export class ImportService {
         
         if (!job) {
           isNewJob = true;
-          
-          // Validate Company Code is provided
-          if (!row['Company Code']) {
-            throw new Error(`Job "${row['Job Code']}" is missing Company Code. Please provide a Company Code for this job.`);
-          }
           
           // Get company from the row's Company Code
           const company = await tx.company.findUnique({
@@ -552,20 +542,13 @@ export class ImportService {
         if (!task) {
           isNewTask = true;
           
-          // Validate Company Code is provided
-          const companyCode = row['Company Code'];
-          
-          if (!companyCode || companyCode === '') {
-            throw new Error(`Task "${row['Task Code']}" has empty Company Code. Row data: ${JSON.stringify(row)}`);
-          }
-          
           // Get company from the row's Company Code
           const company = await tx.company.findUnique({
-            where: { companyCode: companyCode },
+            where: { companyCode: row['Company Code'] },
           });
 
           if (!company) {
-            throw new Error(`Task "${row['Task Code']}": Company with code "${companyCode}" not found in database. Please add a company with this exact code to the Company sheet first.`);
+            throw new Error(`Task "${row['Task Code']}": Company with code "${row['Company Code']}" not found in database. Please add a company with this exact code to the Company sheet first.`);
           }
           
           // Create task
@@ -697,11 +680,6 @@ export class ImportService {
         if (existing) {
           detail.skipped++;
           continue;
-        }
-
-        // Validate Company Code is provided
-        if (!row['Company Code']) {
-          throw new Error(`Process "${row['Process Code']}" is missing Company Code. Please provide a Company Code for this process.`);
         }
 
         // Get company from the row's Company Code
@@ -924,11 +902,6 @@ export class ImportService {
         if (existing) {
           detail.skipped++;
           continue;
-        }
-
-        // Validate Company Code is provided
-        if (!row['Company Code']) {
-          throw new Error(`Person "${row['First Name']} ${row['Surname']}" is missing Company Code. Please provide a Company Code for this person.`);
         }
 
         // Get company from the row's Company Code

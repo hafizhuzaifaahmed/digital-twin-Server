@@ -5,17 +5,17 @@ import { UpdateProcessDto } from './dto/update-process.dto';
 
 @Injectable()
 export class ProcessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(createProcessDto: CreateProcessDto) {
-    const { 
-      process_name, 
-      process_code, 
-      company_id, 
-      process_overview, 
-      parent_process_id, 
-      parent_task_id, 
-      workflow 
+    const {
+      process_name,
+      process_code,
+      company_id,
+      process_overview,
+      parent_process_id,
+      parent_task_id,
+      workflow
     } = createProcessDto;
 
     return this.prisma.executeWithRetry(async (client) => {
@@ -359,14 +359,14 @@ export class ProcessService {
     });
 
     const totalCapacity = processTasks.reduce(
-      (sum, pt) => sum + pt.task.task_capacity_minutes, 
+      (sum, pt) => sum + pt.task.task_capacity_minutes,
       0
     );
 
     await this.prisma.process.update({
       where: { process_id },
-      data: { 
-        capacity_requirement_minutes: processTasks.length > 0 ? totalCapacity : null 
+      data: {
+        capacity_requirement_minutes: processTasks.length > 0 ? totalCapacity : null
       },
     });
 
@@ -393,8 +393,8 @@ export class ProcessService {
 
     // Check if connection already exists
     const existingConnection = await this.prisma.process_task.findUnique({
-      where: { 
-        process_id_task_id: { process_id, task_id } 
+      where: {
+        process_id_task_id: { process_id, task_id }
       },
     });
     if (existingConnection) {
@@ -435,8 +435,8 @@ export class ProcessService {
   async disconnectTask(process_id: number, task_id: number) {
     // Verify the connection exists
     const connection = await this.prisma.process_task.findUnique({
-      where: { 
-        process_id_task_id: { process_id, task_id } 
+      where: {
+        process_id_task_id: { process_id, task_id }
       },
     });
 
@@ -446,8 +446,8 @@ export class ProcessService {
 
     // Remove the connection
     await this.prisma.process_task.delete({
-      where: { 
-        process_id_task_id: { process_id, task_id } 
+      where: {
+        process_id_task_id: { process_id, task_id }
       },
     });
 
@@ -456,4 +456,28 @@ export class ProcessService {
 
     return { message: `Task ${task_id} disconnected from process ${process_id}` };
   }
+
+
+  async processswithCompany(company_id: number) {
+    const company = await this.prisma.company.findUnique({
+      where: { company_id },
+    });
+
+    if (!company) {
+      throw new NotFoundException(`Company with ID ${company_id} not found`);
+    }
+
+    return this.prisma.process.findMany({
+      where: {
+        company_id: company_id,
+      },
+      include: {
+        company: true,
+      },
+    });
+  }
+
+
+
+
 }
