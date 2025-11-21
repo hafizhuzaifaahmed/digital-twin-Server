@@ -4,8 +4,6 @@ import { AppModule } from './app.module';
 import { SeedService } from './auth/seed.service';
 
 async function bootstrap() {
-
-
   const app = await NestFactory.create(AppModule);
 
   // Enable CORS
@@ -50,7 +48,6 @@ async function bootstrap() {
   await seeder.seedSuperAdmin();
 
   await app.listen(process.env.PORT ?? 3001);
->>>>>>> origin/main
 }
 
 bootstrap().catch((error) => {
