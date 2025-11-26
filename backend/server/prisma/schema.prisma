@@ -361,7 +361,7 @@ model asset_task {
   asset_task_id   Int        @id @default(autoincrement())
 
   task_id         Int
-  process_id      Int
+  process_id      Int?
 
   type            String     // event / document / information
   input           Boolean    @default(false)
@@ -370,7 +370,7 @@ model asset_task {
   document_link   String?
 
   task            task        @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
-  process         process     @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
+  process         process?    @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
 
   @@index([task_id])
   @@index([process_id])
