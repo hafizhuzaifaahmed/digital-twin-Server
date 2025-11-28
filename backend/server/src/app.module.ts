@@ -25,6 +25,7 @@ import { Users3dModule } from './users-3d/users-3d.module';
 import { OrganizationTypeModule } from './organization-type/organization-type.module';
 import { HierarchicalViewModule } from './hierarchical-view/hierarchical-view.module';
 import { UnassignedEntitiesModule } from './unassigned-entities/unassigned-entities.module';
+import { AssestTaskModule } from './assest_task/assest_task.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { UnassignedEntitiesModule } from './unassigned-entities/unassigned-entit
     OrganizationTypeModule,
     HierarchicalViewModule,
     UnassignedEntitiesModule,
+    AssestTaskModule,
   ],
   controllers: [AppController],
   providers: [

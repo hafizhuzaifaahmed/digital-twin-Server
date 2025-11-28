@@ -57,7 +57,33 @@ export class ProcessService {
 
     return this.prisma.executeWithRetry(async (client) => {
       return client.$transaction(async (prisma) => {
-        // Create the process
+
+        // 🚨 Step 1: Check if parent_process_id is invalid (cyclic)
+        if (parent_process_id) {
+          // Check if parent belongs to same company
+          const parentProcess = await prisma.process.findUnique({
+            where: { process_id: parent_process_id },
+            select: { company_id: true }
+          });
+
+          if (!parentProcess) {
+            throw new NotFoundException("Parent process not found.");
+          }
+
+          if (parentProcess.company_id !== company_id) {
+            throw new BadRequestException("Parent process belongs to a different company.");
+          }
+
+          // 🚨 Check no cycle can happen
+          const invalid = await this.isCircularParent(prisma, parent_process_id, company_id);
+          if (invalid) {
+            throw new BadRequestException(
+              "Invalid parent: A process cannot be parent of its ancestor."
+            );
+          }
+        }
+
+        // Step 2: Create process
         const process = await prisma.process.create({
           data: {
             process_name,
@@ -69,44 +95,49 @@ export class ProcessService {
           },
         });
 
-        // If workflow is provided, create process_task entries
+        // Step 3: (your existing workflow code stays unchanged)
         if (workflow && workflow.length > 0) {
-          // Validate that all tasks exist
-          const taskIds = workflow.map((w) => w.task_id);
-          const existingTasks = await prisma.task.findMany({
-            where: { task_id: { in: taskIds } },
-            select: { task_id: true, task_capacity_minutes: true },
-          });
+          // Filter workflow items that have task_id (not child_process_id)
+          const taskWorkflowItems = workflow.filter((w): w is typeof w & { task_id: number } => w.task_id !== undefined);
+          const taskIds = taskWorkflowItems.map((w) => w.task_id);
 
-          if (existingTasks.length !== taskIds.length) {
-            const missingIds = taskIds.filter((id) => !existingTasks.some((t) => t.task_id === id));
-            throw new NotFoundException(`Tasks not found: ${missingIds.join(', ')}`);
+          let existingTasks: { task_id: number; task_capacity_minutes: number }[] = [];
+          if (taskIds.length > 0) {
+            existingTasks = await prisma.task.findMany({
+              where: { task_id: { in: taskIds } },
+              select: { task_id: true, task_capacity_minutes: true },
+            });
+
+            if (existingTasks.length !== taskIds.length) {
+              const missingIds = taskIds.filter((id) => !existingTasks.some((t) => t.task_id === id));
+              throw new NotFoundException(`Tasks not found: ${missingIds.join(', ')}`);
+            }
           }
 
-          // Validate that all jobs exist
-          const jobIds = workflow.map((w) => w.job_id);
-          const uniqueJobIds = [...new Set(jobIds)]; // Deduplicate job IDs
-          const existingJobs = await prisma.job.findMany({
-            where: { job_id: { in: uniqueJobIds } },
-            select: { job_id: true },
-          });
+          const jobIds = taskWorkflowItems.map((w) => w.job_id);
+          const uniqueJobIds = [...new Set(jobIds)];
+          if (uniqueJobIds.length > 0) {
+            const existingJobs = await prisma.job.findMany({
+              where: { job_id: { in: uniqueJobIds } },
+              select: { job_id: true },
+            });
 
-          if (existingJobs.length !== uniqueJobIds.length) {
-            const missingJobIds = uniqueJobIds.filter((id) => !existingJobs.some((j) => j.job_id === id));
-            throw new NotFoundException(`Jobs not found: ${missingJobIds.join(', ')}`);
+            if (existingJobs.length !== uniqueJobIds.length) {
+              const missingJobIds = uniqueJobIds.filter((id) => !existingJobs.some((j) => j.job_id === id));
+              throw new NotFoundException(`Jobs not found: ${missingJobIds.join(', ')}`);
+            }
           }
 
-          // Create process_task entries
           await prisma.process_task.createMany({
             data: workflow.map((w) => ({
               process_id: process.process_id,
               task_id: w.task_id,
+              child_process_id: w.child_process_id,
               order: w.order,
             })),
           });
 
-          // Create or update job_task relationships
-          for (const workflowItem of workflow) {
+          for (const workflowItem of taskWorkflowItems) {
             await prisma.job_task.upsert({
               where: {
                 job_id_task_id: {
@@ -114,7 +145,7 @@ export class ProcessService {
                   task_id: workflowItem.task_id,
                 },
               },
-              update: {}, // No update needed if exists
+              update: {},
               create: {
                 job_id: workflowItem.job_id,
                 task_id: workflowItem.task_id,
@@ -122,7 +153,6 @@ export class ProcessService {
             });
           }
 
-          // Calculate and update capacity_requirement_minutes
           const totalCapacity = existingTasks.reduce((sum, task) => sum + task.task_capacity_minutes, 0);
           await prisma.process.update({
             where: { process_id: process.process_id },
@@ -130,7 +160,6 @@ export class ProcessService {
           });
         }
 
-        // Return the created process with relations
         return prisma.process.findUnique({
           where: { process_id: process.process_id },
           include: {
@@ -156,6 +185,7 @@ export class ProcessService {
       });
     });
   }
+
 
   async findAll() {
     return this.prisma.process.findMany({
@@ -263,6 +293,44 @@ export class ProcessService {
           }
         }
 
+        // 🚨 Validate parent_process_id to prevent self-referencing and circular hierarchy
+        if (parent_process_id !== undefined && parent_process_id !== null) {
+          // A process cannot be its own parent
+          if (parent_process_id === process_id) {
+            throw new BadRequestException("A process cannot be its own parent.");
+          }
+
+          // Check if parent exists
+          const parentProcess = await prisma.process.findUnique({
+            where: { process_id: parent_process_id },
+            select: { company_id: true }
+          });
+
+          if (!parentProcess) {
+            throw new NotFoundException("Parent process not found.");
+          }
+
+          // Get the company_id of the current process for validation
+          const currentProcess = await prisma.process.findUnique({
+            where: { process_id },
+            select: { company_id: true }
+          });
+
+          const effectiveCompanyId = company_id || currentProcess?.company_id;
+
+          if (parentProcess.company_id !== effectiveCompanyId) {
+            throw new BadRequestException("Parent process belongs to a different company.");
+          }
+
+          // 🚨 Check for circular hierarchy - ensure the new parent is not a descendant of this process
+          const wouldCreateCycle = await this.wouldCreateCycle(prisma, process_id, parent_process_id);
+          if (wouldCreateCycle) {
+            throw new BadRequestException(
+              "Invalid parent: Setting this parent would create a circular hierarchy."
+            );
+          }
+        }
+
         // Update the process basic fields
         await prisma.process.update({
           where: { process_id },
@@ -284,29 +352,37 @@ export class ProcessService {
           });
 
           if (workflow.length > 0) {
-            // Validate that all tasks exist
-            const taskIds = workflow.map((w) => w.task_id);
-            const existingTasks = await prisma.task.findMany({
-              where: { task_id: { in: taskIds } },
-              select: { task_id: true, task_capacity_minutes: true },
-            });
+            // Filter workflow items that have task_id (not child_process_id)
+            const taskWorkflowItems = workflow.filter((w): w is typeof w & { task_id: number } => w.task_id !== undefined);
+            const taskIds = taskWorkflowItems.map((w) => w.task_id);
 
-            if (existingTasks.length !== taskIds.length) {
-              const missingIds = taskIds.filter((id) => !existingTasks.some((t) => t.task_id === id));
-              throw new NotFoundException(`Tasks not found: ${missingIds.join(', ')}`);
+            let existingTasks: { task_id: number; task_capacity_minutes: number }[] = [];
+            if (taskIds.length > 0) {
+              // Validate that all tasks exist
+              existingTasks = await prisma.task.findMany({
+                where: { task_id: { in: taskIds } },
+                select: { task_id: true, task_capacity_minutes: true },
+              });
+
+              if (existingTasks.length !== taskIds.length) {
+                const missingIds = taskIds.filter((id) => !existingTasks.some((t) => t.task_id === id));
+                throw new NotFoundException(`Tasks not found: ${missingIds.join(', ')}`);
+              }
             }
 
             // Validate that all jobs exist
-            const jobIds = workflow.map((w) => w.job_id);
+            const jobIds = taskWorkflowItems.map((w) => w.job_id);
             const uniqueJobIds = [...new Set(jobIds)]; // Deduplicate job IDs
-            const existingJobs = await prisma.job.findMany({
-              where: { job_id: { in: uniqueJobIds } },
-              select: { job_id: true },
-            });
+            if (uniqueJobIds.length > 0) {
+              const existingJobs = await prisma.job.findMany({
+                where: { job_id: { in: uniqueJobIds } },
+                select: { job_id: true },
+              });
 
-            if (existingJobs.length !== uniqueJobIds.length) {
-              const missingJobIds = uniqueJobIds.filter((id) => !existingJobs.some((j) => j.job_id === id));
-              throw new NotFoundException(`Jobs not found: ${missingJobIds.join(', ')}`);
+              if (existingJobs.length !== uniqueJobIds.length) {
+                const missingJobIds = uniqueJobIds.filter((id) => !existingJobs.some((j) => j.job_id === id));
+                throw new NotFoundException(`Jobs not found: ${missingJobIds.join(', ')}`);
+              }
             }
 
             // Create new process_task entries
@@ -314,12 +390,13 @@ export class ProcessService {
               data: workflow.map((w) => ({
                 process_id,
                 task_id: w.task_id,
+                child_process_id: w.child_process_id,
                 order: w.order,
               })),
             });
 
             // Create or update job_task relationships
-            for (const workflowItem of workflow) {
+            for (const workflowItem of taskWorkflowItems) {
               await prisma.job_task.upsert({
                 where: {
                   job_id_task_id: {
@@ -391,12 +468,12 @@ export class ProcessService {
   // Helper method to recalculate capacity for a process
   private async recalculateCapacity(process_id: number) {
     const processTasks = await this.prisma.process_task.findMany({
-      where: { process_id },
+      where: { process_id, task_id: { not: null } },
       include: { task: { select: { task_capacity_minutes: true } } },
     });
 
     const totalCapacity = processTasks.reduce(
-      (sum, pt) => sum + pt.task.task_capacity_minutes,
+      (sum, pt) => sum + (pt.task?.task_capacity_minutes || 0),
       0
     );
 
@@ -429,9 +506,10 @@ export class ProcessService {
     }
 
     // Check if connection already exists
-    const existingConnection = await this.prisma.process_task.findUnique({
+    const existingConnection = await this.prisma.process_task.findFirst({
       where: {
-        process_id_task_id: { process_id, task_id }
+        process_id,
+        task_id
       },
     });
     if (existingConnection) {
@@ -471,9 +549,10 @@ export class ProcessService {
 
   async disconnectTask(process_id: number, task_id: number) {
     // Verify the connection exists
-    const connection = await this.prisma.process_task.findUnique({
+    const connection = await this.prisma.process_task.findFirst({
       where: {
-        process_id_task_id: { process_id, task_id }
+        process_id,
+        task_id
       },
     });
 
@@ -484,7 +563,7 @@ export class ProcessService {
     // Remove the connection
     await this.prisma.process_task.delete({
       where: {
-        process_id_task_id: { process_id, task_id }
+        process_task_id: connection.process_task_id
       },
     });
 
@@ -514,7 +593,73 @@ export class ProcessService {
     });
   }
 
+  /**
+   * Check if setting a parent would create a circular reference (for create operation)
+   * This walks up the parent chain from the proposed parent to ensure no cycles exist
+   */
+  private async isCircularParent(prisma: any, newParentId: number, companyId: number): Promise<boolean> {
+    // Walk upward from the new parent until root
+    let current = await prisma.process.findUnique({
+      where: { process_id: newParentId },
+      select: { parent_process_id: true, company_id: true }
+    });
 
+    // Safety: parent must belong to same company
+    if (current && current.company_id !== companyId) {
+      throw new BadRequestException("Parent process belongs to a different company.");
+    }
 
+    const visited = new Set<number>();
+    visited.add(newParentId);
 
+    while (current?.parent_process_id) {
+      if (visited.has(current.parent_process_id)) {
+        // Found a cycle in existing hierarchy
+        return true;
+      }
+      visited.add(current.parent_process_id);
+
+      current = await prisma.process.findUnique({
+        where: { process_id: current.parent_process_id },
+        select: { parent_process_id: true }
+      });
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if setting newParentId as parent of processId would create a cycle (for update operation)
+   * This ensures the new parent is not a descendant of the process being updated
+   */
+  private async wouldCreateCycle(prisma: any, processId: number, newParentId: number): Promise<boolean> {
+    // Walk up the ancestor chain starting from the new parent
+    // If we encounter processId, it means newParentId is a descendant of processId
+    // and setting it as parent would create a cycle
+
+    const visited = new Set<number>();
+    let currentId: number | null = newParentId;
+
+    while (currentId !== null) {
+      // If we've reached the process we're updating, there would be a cycle
+      if (currentId === processId) {
+        return true;
+      }
+
+      // Prevent infinite loops in case of existing data corruption
+      if (visited.has(currentId)) {
+        break;
+      }
+      visited.add(currentId);
+
+      const current = await prisma.process.findUnique({
+        where: { process_id: currentId },
+        select: { parent_process_id: true }
+      });
+
+      currentId = current?.parent_process_id ?? null;
+    }
+
+    return false;
+  }
 }

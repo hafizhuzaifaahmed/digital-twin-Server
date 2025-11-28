@@ -194,13 +194,14 @@ model process {
   process_code                       String         @unique
   process_name                       String
   process_overview                   String         @db.Text
+  asset_tasks                        asset_task[]
   company                            company        @relation(fields: [company_id], references: [company_id], onDelete: Cascade)
   process                            process?       @relation("processToprocess", fields: [parent_process_id], references: [process_id])
   other_process                      process[]      @relation("processToprocess")
   task_process_parent_task_idTotask  task?          @relation("process_parent_task_idTotask", fields: [parent_task_id], references: [task_id])
-  process_task                       process_task[]
   task_task_task_process_idToprocess task[]         @relation("task_task_process_idToprocess")
-  asset_tasks                        asset_task[]
+  process_task                       process_task[] @relation("process_task_process")
+  process_task_as_child              process_task[] @relation("process_task_child_process")
 
   @@index([company_id], map: "process_company_id_fkey")
   @@index([parent_process_id], map: "process_parent_process_id_fkey")
@@ -217,13 +218,14 @@ model task {
   task_name                             String
   task_overview                         String         @db.Text
   task_process_id                       Int?
+  asset_tasks                           asset_task[]
   jobTasks                              job_task[]
   process_process_parent_task_idTotask  process[]      @relation("process_parent_task_idTotask")
-  process_task                          process_task[]
   company                               company        @relation(fields: [task_company_id], references: [company_id], onDelete: Cascade)
   process_task_task_process_idToprocess process?       @relation("task_task_process_idToprocess", fields: [task_process_id], references: [process_id])
   task_skill                            task_skill[]
-  asset_tasks                           asset_task[]
+  process_task                          process_task[] @relation("process_task_task")
+
   @@index([task_company_id], map: "task_task_company_id_fkey")
   @@index([task_process_id], map: "task_task_process_id_fkey")
 }
@@ -296,14 +298,18 @@ model job_task {
 }
 
 model process_task {
-  process_id Int
-  task_id    Int
-  order      Int
-  process    process @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
-  task       task    @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+  process_task_id  Int      @id @default(autoincrement())
+  process_id       Int
+  task_id          Int?
+  order            Int
+  child_process_id Int?
+  process          process  @relation("process_task_process", fields: [process_id], references: [process_id], onDelete: Cascade)
+  task             task?    @relation("process_task_task", fields: [task_id], references: [task_id], onDelete: Cascade)
+  child_process    process? @relation("process_task_child_process", fields: [child_process_id], references: [process_id], onDelete: Cascade)
 
-  @@id([process_id, task_id])
+  @@index([process_id], map: "process_task_process_id_fkey")
   @@index([task_id], map: "process_task_task_id_fkey")
+  @@index([child_process_id], map: "process_task_child_process_fkey")
 }
 
 model skill_level {
@@ -358,24 +364,20 @@ model Function {
 }
 
 model asset_task {
-  asset_task_id   Int        @id @default(autoincrement())
-
-  task_id         Int
-  process_id      Int
-
-  type            String     // event / document / information
-  input           Boolean    @default(false)
-  output          Boolean    @default(false)
-  description     String     @db.Text
-  document_link   String?
-
-  task            task        @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
-  process         process     @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
+  asset_task_id Int      @id @default(autoincrement())
+  task_id       Int
+  process_id    Int?
+  type          String
+  input         Boolean  @default(false)
+  output        Boolean  @default(false)
+  description   String   @db.Text
+  document_link String?
+  process       process? @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
+  task          task     @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
 
   @@index([task_id])
   @@index([process_id])
 }
-
 
 enum CellType {
   EMPTY
