@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 
 @Injectable()
 export class ExportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Truncate text to Excel's maximum cell length
@@ -25,7 +25,7 @@ export class ExportService {
 
     // Get processes
     const processes = await this.prisma.process.findMany({
-      where: { 
+      where: {
         process_id: {
           in: processIds,
         },
@@ -84,7 +84,7 @@ export class ExportService {
    */
   private async fetchCompaniesByIds(companyIds: number[]): Promise<any[]> {
     const companies = await this.prisma.company.findMany({
-      where: { 
+      where: {
         company_id: {
           in: companyIds,
         },
@@ -203,7 +203,7 @@ export class ExportService {
     return tasks.map((task) => {
       // Extract associated jobs
       const associatedJobs = task.jobTasks.map(jt => jt.job.jobCode).join(', ');
-      
+
       // Extract skills and skill ranks
       const skills = task.task_skill.map(ts => ts.skill.name).join(', ');
       const skillRanks = task.task_skill.map(ts => ts.skill_level.level_rank).join(', ');
@@ -226,7 +226,7 @@ export class ExportService {
    */
   private async fetchProcessesByIds(processIds: number[]): Promise<any[]> {
     const processes = await this.prisma.process.findMany({
-      where: { 
+      where: {
         process_id: {
           in: processIds,
         },
@@ -274,13 +274,13 @@ export class ExportService {
       },
     });
 
-    return tasks.map((task) => {
+    return tasks.map((task: any) => {
       // Extract associated jobs
-      const associatedJobs = task.jobTasks.map(jt => jt.job.jobCode).join(', ');
-      
+      const associatedJobs = task.jobTasks.map((jt: any) => jt.job.jobCode).join(', ');
+
       // Extract skills and skill ranks
-      const skills = task.task_skill.map(ts => ts.skill.name).join(', ');
-      const skillRanks = task.task_skill.map(ts => ts.skill_level.level_rank).join(', ');
+      const skills = task.task_skill.map((ts: any) => ts.skill.name).join(', ');
+      const skillRanks = task.task_skill.map((ts: any) => ts.skill_level.level_rank).join(', ');
 
       return {
         'Task Name': task.task_name,
@@ -436,6 +436,7 @@ export class ExportService {
         process_id: {
           in: processIds,
         },
+        task_id: { not: null },
       },
       include: {
         task: true,
@@ -446,8 +447,8 @@ export class ExportService {
       },
     });
 
-    return taskProcesses.map((tp) => ({
-      'TaskCode': tp.task.task_code,
+    return taskProcesses.filter(tp => tp.task !== null).map((tp) => ({
+      'TaskCode': tp.task!.task_code,
       'ProcessCode': tp.process.process_code,
       'Order': tp.order,
     }));
@@ -566,7 +567,7 @@ export class ExportService {
     return tasks.map((task) => {
       // Extract associated jobs
       const associatedJobs = task.jobTasks.map(jt => jt.job.jobCode).join(', ');
-      
+
       // Extract skills and skill ranks
       const skills = task.task_skill.map(ts => ts.skill.name).join(', ');
       const skillRanks = task.task_skill.map(ts => ts.skill_level.level_rank).join(', ');
@@ -717,6 +718,7 @@ export class ExportService {
     const taskProcesses = await this.prisma.process_task.findMany({
       where: {
         process_id: processId,
+        task_id: { not: null },
       },
       include: {
         task: true,
@@ -727,8 +729,8 @@ export class ExportService {
       },
     });
 
-    return taskProcesses.map((tp) => ({
-      'TaskCode': tp.task.task_code,
+    return taskProcesses.filter(tp => tp.task !== null).map((tp) => ({
+      'TaskCode': tp.task!.task_code,
       'ProcessCode': tp.process.process_code,
       'Order': tp.order,
     }));
@@ -840,6 +842,7 @@ export class ExportService {
         task: {
           task_company_id: companyId,
         },
+        task_id: { not: null },
       },
       include: {
         task: true,
@@ -850,8 +853,8 @@ export class ExportService {
       },
     });
 
-    return taskProcesses.map((tp) => ({
-      'TaskCode': tp.task.task_code,
+    return taskProcesses.filter(tp => tp.task !== null).map((tp) => ({
+      'TaskCode': tp.task!.task_code,
       'ProcessCode': tp.process.process_code,
       'Order': tp.order,
     }));
@@ -901,7 +904,7 @@ export class ExportService {
    */
   private addSheet(workbook: XLSX.WorkBook, sheetName: string, data: any[]): void {
     const worksheet = XLSX.utils.json_to_sheet(data);
-    
+
     // Make headers bold
     if (worksheet['!ref']) {
       const range = XLSX.utils.decode_range(worksheet['!ref']);
@@ -918,7 +921,7 @@ export class ExportService {
         }
       }
     }
-    
+
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   }
 }
