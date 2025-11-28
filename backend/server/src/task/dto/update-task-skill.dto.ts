@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, MaxLength, MinLength } from 'class-validator';
 import { LevelName } from './create-task-skill.dto';
 
 export class UpdateTaskSkillDto {
@@ -7,8 +7,10 @@ export class UpdateTaskSkillDto {
     description: 'Name of the skill',
     example: 'Soldering',
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Skill name must be a string' })
+  @IsNotEmpty({ message: 'Skill name is required' })
+  @MinLength(2, { message: 'Skill name must be at least 2 characters long' })
+  @MaxLength(100, { message: 'Skill name cannot exceed 100 characters' })
   skill_name: string;
 
   @ApiProperty({
@@ -16,6 +18,6 @@ export class UpdateTaskSkillDto {
     enum: LevelName,
     example: 'EXPERT',
   })
-  @IsEnum(LevelName)
+  @IsEnum(LevelName, { message: 'Level must be one of: NOVICE, INTERMEDIATE, PROFICIENT, ADVANCED, EXPERT' })
   level: LevelName;
 }
