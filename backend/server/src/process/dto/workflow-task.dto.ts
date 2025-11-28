@@ -6,16 +6,16 @@ export class WorkflowTaskDto {
     description: 'Task ID to include in the workflow',
     example: 1,
   })
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'Task ID must be a valid integer' })
+  @IsPositive({ message: 'Task ID must be a positive number' })
   task_id: number;
 
   @ApiProperty({
     description: 'Job ID to assign to this task in the workflow',
     example: 10,
   })
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'Job ID must be a valid integer' })
+  @IsPositive({ message: 'Job ID must be a positive number' })
   job_id: number;
 
   @ApiProperty({
@@ -23,7 +23,7 @@ export class WorkflowTaskDto {
     example: 1,
     minimum: 1,
   })
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'Order must be a valid integer' })
+  @Min(1, { message: 'Order must be at least 1' })
   order: number;
 }

@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProcessDto } from './dto/create-process.dto';
 import { UpdateProcessDto } from './dto/update-process.dto';
@@ -17,6 +18,42 @@ export class ProcessService {
       parent_task_id,
       workflow
     } = createProcessDto;
+
+    // Validate company exists
+    const company = await this.prisma.company.findUnique({
+      where: { company_id },
+    });
+    if (!company) {
+      throw new BadRequestException(`Company with ID ${company_id} does not exist`);
+    }
+
+    // Validate parent process exists if provided
+    if (parent_process_id) {
+      const parentProcess = await this.prisma.process.findUnique({
+        where: { process_id: parent_process_id },
+      });
+      if (!parentProcess) {
+        throw new BadRequestException(`Parent process with ID ${parent_process_id} does not exist`);
+      }
+    }
+
+    // Validate parent task exists if provided
+    if (parent_task_id) {
+      const parentTask = await this.prisma.task.findUnique({
+        where: { task_id: parent_task_id },
+      });
+      if (!parentTask) {
+        throw new BadRequestException(`Parent task with ID ${parent_task_id} does not exist`);
+      }
+    }
+
+    // Check for duplicate process code
+    const existingProcess = await this.prisma.process.findFirst({
+      where: { process_code },
+    });
+    if (existingProcess) {
+      throw new ConflictException(`A process with code '${process_code}' already exists`);
+    }
 
     return this.prisma.executeWithRetry(async (client) => {
       return client.$transaction(async (prisma) => {

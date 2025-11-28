@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { SeedService } from './auth/seed.service';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -34,12 +35,36 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Accept, Authorization',
   });
 
+  // Global exception filter - handles Prisma errors, validation errors, and HTTP exceptions
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Validation pipe with custom error messages
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
+      stopAtFirstError: false, // Return all validation errors
+      exceptionFactory: (errors) => {
+        const messages = errors.map(error => {
+          const constraints = error.constraints;
+          if (constraints) {
+            return Object.values(constraints).join(', ');
+          }
+          // Handle nested validation errors
+          if (error.children && error.children.length > 0) {
+            return `${error.property}: Invalid nested data`;
+          }
+          return `${error.property}: Invalid value`;
+        });
+        
+        return new BadRequestException({
+          statusCode: 400,
+          message: messages,
+          error: 'Validation Error',
+        });
+      },
     }),
   );
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -33,6 +33,32 @@ export class TaskService {
   constructor(private readonly prisma: PrismaService) { }
 
   async create(createTaskDto: CreateTaskDto): Promise<TaskWithRelations> {
+    // Validate company exists
+    const company = await this.prisma.company.findUnique({
+      where: { company_id: createTaskDto.task_company_id },
+    });
+    if (!company) {
+      throw new BadRequestException(`Company with ID ${createTaskDto.task_company_id} does not exist`);
+    }
+
+    // Validate process exists if provided
+    if (createTaskDto.task_process_id) {
+      const process = await this.prisma.process.findUnique({
+        where: { process_id: createTaskDto.task_process_id },
+      });
+      if (!process) {
+        throw new BadRequestException(`Process with ID ${createTaskDto.task_process_id} does not exist`);
+      }
+    }
+
+    // Check for duplicate task code
+    const existingTask = await this.prisma.task.findFirst({
+      where: { task_code: createTaskDto.task_code },
+    });
+    if (existingTask) {
+      throw new ConflictException(`A task with code '${createTaskDto.task_code}' already exists`);
+    }
+
     return this.prisma.executeWithRetry(async (prisma) => {
       return prisma.$transaction(async (tx) => {
         try {
