@@ -17,6 +17,43 @@ export class JobService {
   };
 
   async create(dto: CreateJobDto) {
+    // Validate company exists
+    const company = await this.prisma.company.findUnique({
+      where: { company_id: dto.company_id },
+    });
+    if (!company) {
+      throw new BadRequestException(`Company with ID ${dto.company_id} does not exist`);
+    }
+
+    // Validate function exists
+    const func = await (this.prisma as any).function.findUnique({
+      where: { function_id: dto.function_id },
+    });
+    if (!func) {
+      throw new BadRequestException(`Function with ID ${dto.function_id} does not exist`);
+    }
+
+    // Validate all task IDs exist if provided
+    if (dto.task_ids && dto.task_ids.length > 0) {
+      const existingTasks = await this.prisma.task.findMany({
+        where: { task_id: { in: dto.task_ids } },
+        select: { task_id: true },
+      });
+      if (existingTasks.length !== dto.task_ids.length) {
+        const existingIds = existingTasks.map(t => t.task_id);
+        const missingIds = dto.task_ids.filter(id => !existingIds.includes(id));
+        throw new BadRequestException(`Tasks with IDs [${missingIds.join(', ')}] do not exist`);
+      }
+    }
+
+    // Check for duplicate job code
+    const existingJob = await this.prisma.job.findFirst({
+      where: { jobCode: dto.jobCode },
+    });
+    if (existingJob) {
+      throw new ConflictException(`A job with code '${dto.jobCode}' already exists`);
+    }
+
     return this.prisma.executeWithRetry(async (client) => {
       return client.$transaction(async (tx) => {
       // Resolve job level by level_name (create if missing)
