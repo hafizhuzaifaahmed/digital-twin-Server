@@ -162,9 +162,40 @@ export class Users3dService {
   }
 
   /**
+   * Get all child user IDs recursively (users created by this user and their descendants)
+   */
+  private async getAllChildUserIds(userId: number): Promise<number[]> {
+    const children = await this.prisma.user.findMany({
+      where: { created_by: userId },
+      select: { user_id: true },
+    });
+
+    const childIds = children.map(c => c.user_id);
+
+    // Recursively get grandchildren IDs
+    const grandchildIds = await Promise.all(
+      childIds.map(id => this.getAllChildUserIds(id))
+    );
+
+    return [...childIds, ...grandchildIds.flat()];
+  }
+
+  /**
+   * Get companies created by user AND all their child users (recursive hierarchy)
+   */
+  private async getCompaniesCreatedByUserHierarchy(userId: number) {
+    const childUserIds = await this.getAllChildUserIds(userId);
+    const allUserIds = [userId, ...childUserIds];
+
+    return this.prisma.company.findMany({
+      where: { created_by: { in: allUserIds } },
+    });
+  }
+
+  /**
    * Get accessible companies for a 3D user based on their linked user's role:
    * - If linked to SUPER_ADMIN: returns all companies
-   * - If linked to USER: returns linked user's company
+   * - If linked to USER/ADMIN: returns linked user's assigned company + companies they created (including child users' companies)
    * - If not linked: returns only the 3D user's own company
    */
   async getAccessibleCompanies(user3dId: number) {
@@ -186,6 +217,7 @@ export class Users3dService {
     // If linked to a user, check their role
     if (user3d.linkedUser) {
       const linkedUserRole = user3d.linkedUser.role?.name;
+      const linkedUserId = user3d.linkedUser.user_id;
 
       // SUPER_ADMIN sees all companies
       if (linkedUserRole === 'SUPER_ADMIN') {
@@ -194,16 +226,27 @@ export class Users3dService {
         });
       }
 
-      // USER sees their linked user's company
-      if (user3d.linkedUser.company_id) {
-        const linkedCompany = await this.prisma.company.findUnique({
-          where: { company_id: user3d.linkedUser.company_id },
-        });
-        return linkedCompany ? [linkedCompany] : [];
+      // For other roles (USER, ADMIN, etc.): 
+      // Get assigned company + companies created by user and their child users
+      const companiesMap = new Map<number, any>();
+
+      // 1. Add assigned company (if any)
+      if (user3d.linkedUser.company) {
+        companiesMap.set(user3d.linkedUser.company.company_id, user3d.linkedUser.company);
       }
+
+      // 2. Add companies created by this user and their child users
+      const createdCompanies = await this.getCompaniesCreatedByUserHierarchy(linkedUserId);
+      for (const company of createdCompanies) {
+        companiesMap.set(company.company_id, company);
+      }
+
+      // Return unique companies sorted by name
+      const companies = Array.from(companiesMap.values());
+      return companies.sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // Not linked or linked user has no company: return only 3D user's own company
+    // Not linked: return only 3D user's own company
     return user3d.company ? [user3d.company] : [];
   }
 }
