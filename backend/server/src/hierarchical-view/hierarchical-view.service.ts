@@ -107,11 +107,8 @@ export class HierarchicalViewService {
                 associatedCompany = await this.getCompanyData(user.company_id);
             }
 
-            // Get created companies by this user
-            const createdCompanies = await this.prisma.company.findMany({
-                where: { created_by: userId },
-                select: { company_id: true },
-            });
+            // Get created companies by this user AND their child users (recursive)
+            const createdCompanies = await this.getCompanyCreatedByUser(userId);
 
             const createdCompanyData = await Promise.all(
                 (createdCompanies || []).map((c) => this.getCompanyData(c.company_id))
@@ -145,11 +142,8 @@ export class HierarchicalViewService {
             companyAssigned = await this.getCompanyData(user.company_id);
         }
 
-        // Companies created by the user
-        const createdCompanies = await this.prisma.company.findMany({
-            where: { created_by: user.user_id },
-            select: { company_id: true },
-        });
+        // Companies created by the user AND their child users (recursive hierarchy)
+        const createdCompanies = await this.getCompanyCreatedByUser(user.user_id);
 
         const companyCreated = await Promise.all(
             (createdCompanies || []).map((c) => this.getCompanyData(c.company_id))
@@ -188,9 +182,8 @@ export class HierarchicalViewService {
             where: { company_id: associateCompanyData.company_id },
         }) : [];
 
-        const createdCompanies = await this.prisma.company.findMany({
-            where: { created_by: userId },
-        });
+        // Get companies created by user AND their child users (recursive)
+        const createdCompanies = await this.getCompanyCreatedByUser(userId);
 
         const createdCompanyBuildings = await Promise.all(
             createdCompanies.map((company) =>
@@ -332,9 +325,38 @@ export class HierarchicalViewService {
         return buildings;
     }
 
-    async getCompanyCreatedByUser(userId: number) {
-        const companies = await this.prisma.company.findMany({
+    /**
+     * Get all child user IDs recursively (users created by this user and their descendants)
+     */
+    private async getAllChildUserIds(userId: number): Promise<number[]> {
+        const children = await this.prisma.user.findMany({
             where: { created_by: userId },
+            select: { user_id: true },
+        });
+
+        const childIds = children.map(c => c.user_id);
+
+        // Recursively get grandchildren IDs
+        const grandchildIds = await Promise.all(
+            childIds.map(id => this.getAllChildUserIds(id))
+        );
+
+        return [...childIds, ...grandchildIds.flat()];
+    }
+
+    /**
+     * Get companies created by user AND all their child users (recursive hierarchy)
+     * When admin creates users, admin can see companies created by those child users too
+     */
+    async getCompanyCreatedByUser(userId: number) {
+        // Get all child user IDs (descendants created by this user)
+        const childUserIds = await this.getAllChildUserIds(userId);
+        
+        // Include the user themselves plus all child users
+        const allUserIds = [userId, ...childUserIds];
+
+        const companies = await this.prisma.company.findMany({
+            where: { created_by: { in: allUserIds } },
         });
         return companies;
     }
