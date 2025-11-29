@@ -31,9 +31,16 @@ export class AuthService {
     // Identifier is email in the new schema
     const user3D = await this.prisma.users_3d.findFirst({
       where: { email: identifier },
+      include: {
+        company: true,
+        linkedUser: {
+          include: {
+            role: true,
+            company: true,
+          },
+        },
+      },
     });
-
-
 
     if (!user3D) throw new NotFoundException('Invalid email or password');
     const ok = await bcrypt.compare(password, user3D.password);
@@ -41,18 +48,52 @@ export class AuthService {
     return user3D;
   }
 
-
   async login3dUser(identifier: string, password: string) {
     const user3D = await this.validate3dUserByIdentifier(identifier, password);
+
+    // Determine company access based on linked user's role
+    let companyAccess: 'all' | 'single' = 'single';
+    let accessibleCompanyId: number | null = user3D.company_id;
+
+    if (user3D.linkedUser) {
+      const linkedUserRole = user3D.linkedUser.role?.name;
+      if (linkedUserRole === 'SUPER_ADMIN') {
+        companyAccess = 'all';
+        accessibleCompanyId = null; // null means all companies
+      } else if (user3D.linkedUser.company_id) {
+        accessibleCompanyId = user3D.linkedUser.company_id;
+      }
+    }
 
     const payload = {
       sub: user3D.id,
       email: user3D.email,
       name: user3D.name,
+      company_id: user3D.company_id,
+      company_access: companyAccess,
+      accessible_company_id: accessibleCompanyId,
+      linked_user_id: user3D.user_id,
     };
     const access_token = await this.jwtService.signAsync(payload);
-    return { access_token, user: { user_3d_id: user3D.id, email: user3D.email, name: user3D.name } };
-
+    return {
+      access_token,
+      user: {
+        user_3d_id: user3D.id,
+        email: user3D.email,
+        name: user3D.name,
+        company_id: user3D.company_id,
+        company: user3D.company,
+        company_access: companyAccess,
+        accessible_company_id: accessibleCompanyId,
+        linked_user: user3D.linkedUser ? {
+          user_id: user3D.linkedUser.user_id,
+          name: user3D.linkedUser.name,
+          email: user3D.linkedUser.email,
+          role: user3D.linkedUser.role?.name,
+          company_id: user3D.linkedUser.company_id,
+        } : null,
+      },
+    };
   }
 
 

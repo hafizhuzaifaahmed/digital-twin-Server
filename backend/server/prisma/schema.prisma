@@ -26,6 +26,7 @@ model user {
   role             role       @relation(fields: [role_id], references: [role_id])
   created3DUsers   users_3d[] @relation("User3DCreator")
   updated3DUsers   users_3d[] @relation("User3DUpdater")
+  linkedUser3D     users_3d?  @relation("LinkedUser3D")
 
   @@index([company_id], map: "user_company_id_fkey")
   @@index([role_id], map: "user_role_id_fkey")
@@ -42,9 +43,11 @@ model users_3d {
   created_by Int
   updated_at DateTime @updatedAt
   updated_by Int?
+  user_id    Int?     @unique
   company    company  @relation("Users3DCompany", fields: [company_id], references: [company_id], onDelete: Cascade)
   creator    user     @relation("User3DCreator", fields: [created_by], references: [user_id])
   updater    user?    @relation("User3DUpdater", fields: [updated_by], references: [user_id])
+  linkedUser user?    @relation("LinkedUser3D", fields: [user_id], references: [user_id], onDelete: SetNull)
 
   @@index([company_id], map: "users_3d_company_id_fkey")
   @@index([created_by], map: "users_3d_created_by_fkey")
@@ -200,8 +203,8 @@ model process {
   other_process                      process[]      @relation("processToprocess")
   task_process_parent_task_idTotask  task?          @relation("process_parent_task_idTotask", fields: [parent_task_id], references: [task_id])
   task_task_task_process_idToprocess task[]         @relation("task_task_process_idToprocess")
-  process_task                       process_task[] @relation("process_task_process")
-  process_task_as_child              process_task[] @relation("process_task_child_process")
+  process_task                       process_task[]
+  child_process_task                 process_task[] @relation("ChildProcess")
 
   @@index([company_id], map: "process_company_id_fkey")
   @@index([parent_process_id], map: "process_parent_process_id_fkey")
@@ -224,7 +227,7 @@ model task {
   company                               company        @relation(fields: [task_company_id], references: [company_id], onDelete: Cascade)
   process_task_task_process_idToprocess process?       @relation("task_task_process_idToprocess", fields: [task_process_id], references: [process_id])
   task_skill                            task_skill[]
-  process_task                          process_task[] @relation("process_task_task")
+  process_task                          process_task[]
 
   @@index([task_company_id], map: "task_task_company_id_fkey")
   @@index([task_process_id], map: "task_task_process_id_fkey")
@@ -303,9 +306,9 @@ model process_task {
   task_id          Int?
   order            Int
   child_process_id Int?
-  process          process  @relation("process_task_process", fields: [process_id], references: [process_id], onDelete: Cascade)
-  task             task?    @relation("process_task_task", fields: [task_id], references: [task_id], onDelete: Cascade)
-  child_process    process? @relation("process_task_child_process", fields: [child_process_id], references: [process_id], onDelete: Cascade)
+  process          process  @relation(fields: [process_id], references: [process_id], onDelete: Cascade)
+  task             task?    @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+  child_process    process? @relation("ChildProcess", fields: [child_process_id], references: [process_id], onDelete: Cascade)
 
   @@index([process_id], map: "process_task_process_id_fkey")
   @@index([task_id], map: "process_task_task_id_fkey")

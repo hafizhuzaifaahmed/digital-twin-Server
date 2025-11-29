@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsEmail, MinLength } from 'class-validator';
+import { IsInt, IsString, IsEmail, MinLength, IsOptional } from 'class-validator';
 import { Match } from '../../common/validators/match.decorator';
 
 export class CreateUser3dDto {
@@ -22,4 +22,8 @@ export class CreateUser3dDto {
 
   @IsInt()
   created_by!: number;
+
+  @IsOptional()
+  @IsInt()
+  user_id?: number | null;
 }
