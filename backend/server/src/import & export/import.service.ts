@@ -23,10 +23,14 @@ export class ImportService {
 
   /**
    * Main import function - executes bottom-up import in transaction
+   * @param parsedData - The parsed Excel data
+   * @param dryRun - If true, rollback the transaction after validation
+   * @param currentUserId - The ID of the currently logged-in user (for created_by field)
    */
   async importExcelData(
     parsedData: ParsedExcelData,
     dryRun: boolean = false,
+    currentUserId?: number,
   ): Promise<ImportResponseDto> {
     const response: ImportResponseDto = {
       success: false,
@@ -45,10 +49,11 @@ export class ImportService {
     try {
       // Execute entire import in a transaction with extended timeout (5 minutes)
       await this.prisma.$transaction(async (tx) => {
-        // Phase 1: Import companies first
+        // Phase 1: Import companies first (pass the current user ID)
         response.details['Company'] = await this.importCompanies(
           tx,
           parsedData.companies,
+          currentUserId,
         );
 
         // Phase 2: Import in bottom-up order (no company filtering)
@@ -181,10 +186,14 @@ export class ImportService {
 
   /**
    * Import Companies
+   * @param tx - Transaction client
+   * @param companies - Array of company data from Excel
+   * @param currentUserId - The ID of the currently logged-in user (for created_by field)
    */
   private async importCompanies(
     tx: any,
     companies: any[],
+    currentUserId?: number,
   ): Promise<SheetImportDetail> {
     const detail: SheetImportDetail = {
       imported: 0,
@@ -192,6 +201,44 @@ export class ImportService {
       failed: 0,
       errors: [],
     };
+
+    // Determine the user ID to use for created_by
+    let creatorUserId = currentUserId;
+
+    // If no current user ID provided, fall back to finding an admin user
+    if (!creatorUserId) {
+      const adminUser = await tx.user.findFirst({
+        where: { role: { name: 'ADMIN' } },
+      });
+
+      if (adminUser) {
+        creatorUserId = adminUser.user_id;
+      } else {
+        // Create admin role and user as fallback (only if no users exist)
+        let adminRole = await tx.role.findFirst({
+          where: { name: 'ADMIN' },
+        });
+
+        if (!adminRole) {
+          adminRole = await tx.role.create({
+            data: {
+              name: 'ADMIN',
+              description: 'Administrator role',
+            },
+          });
+        }
+
+        const newAdminUser = await tx.user.create({
+          data: {
+            email: 'admin@system.com',
+            password: 'hashed_password',
+            name: 'System Admin',
+            role_id: adminRole.role_id,
+          },
+        });
+        creatorUserId = newAdminUser.user_id;
+      }
+    }
 
     for (let i = 0; i < companies.length; i++) {
       const row = companies[i];
@@ -206,43 +253,12 @@ export class ImportService {
           continue;
         }
 
-        // Get or create admin user for company creation
-        let adminUser = await tx.user.findFirst({
-          where: { role: { name: 'ADMIN' } },
-        });
-
-        if (!adminUser) {
-          // Create admin role if doesn't exist
-          let adminRole = await tx.role.findFirst({
-            where: { name: 'ADMIN' },
-          });
-
-          if (!adminRole) {
-            adminRole = await tx.role.create({
-              data: {
-                name: 'ADMIN',
-                description: 'Administrator role',
-              },
-            });
-          }
-
-          // Create default admin user
-          adminUser = await tx.user.create({
-            data: {
-              email: 'admin@system.com',
-              password: 'hashed_password',
-              name: 'System Admin',
-              role_id: adminRole.role_id,
-            },
-          });
-        }
-
-        // Create company
+        // Create company with the current user as creator
         await tx.company.create({
           data: {
             companyCode: row['Company Code'],
             name: row['Company Name'],
-            created_by: adminUser.user_id,
+            created_by: creatorUserId,
           },
         });
 

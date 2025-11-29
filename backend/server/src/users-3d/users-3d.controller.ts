@@ -28,6 +28,12 @@ export class Users3dController {
     return this.users3dService.findByCompany(companyId);
   }
 
+  @Get(':id/companies')
+  @ApiOperation({ summary: 'Get accessible companies for a 3D user based on linked user role' })
+  getAccessibleCompanies(@Param('id', ParseIntPipe) id: number) {
+    return this.users3dService.getAccessibleCompanies(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a 3D user by ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {

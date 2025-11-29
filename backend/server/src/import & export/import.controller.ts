@@ -9,6 +9,7 @@ import {
   Query,
   Res,
   StreamableFile,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
@@ -17,7 +18,7 @@ import { ImportService } from './import.service';
 import { ExcelParserService } from './excel-parser.service';
 import { ExportService } from './export.service';
 import { ImportResponseDto } from './dto/import-response.dto';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 
 @ApiTags('Import')
 @Controller('import')
@@ -52,6 +53,7 @@ export class ImportController {
   async importExcel(
     @UploadedFile() file: Express.Multer.File,
     @Body('dryRun') dryRun?: string,
+    @Req() req?: Request,
   ): Promise<ImportResponseDto> {
     // Validate file upload
     if (!file) {
@@ -90,11 +92,15 @@ export class ImportController {
     // Parse Excel file
     const parsedData = this.excelParserService.parseExcelFile(file.buffer);
 
+    // Get the current logged-in user ID from JWT
+    const currentUserId = (req as any)?.user?.sub;
+
     // Import data
     const isDryRun = dryRun === 'true' || dryRun === '1';
     const result = await this.importService.importExcelData(
       parsedData,
       isDryRun,
+      currentUserId,
     );
 
     return result;

@@ -24,4 +24,8 @@ export class UpdateUser3dDto {
   @MinLength(6)
   @Match('password', { message: 'confirmPassword must match password' })
   confirmPassword?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  user_id?: number | null;
 }

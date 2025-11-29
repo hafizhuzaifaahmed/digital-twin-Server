@@ -1,7 +1,7 @@
 -- AlterTable: Modify process_task to support child processes
--- Drop old primary key and foreign keys
-ALTER TABLE `process_task` DROP FOREIGN KEY IF EXISTS `process_task_process_id_fkey`;
-ALTER TABLE `process_task` DROP FOREIGN KEY IF EXISTS `process_task_task_id_fkey`;
+-- Drop old foreign keys (MySQL doesn't support IF EXISTS with DROP FOREIGN KEY)
+ALTER TABLE `process_task` DROP FOREIGN KEY `process_task_process_id_fkey`;
+ALTER TABLE `process_task` DROP FOREIGN KEY `process_task_task_id_fkey`;
 
 -- Drop old primary key
 ALTER TABLE `process_task` DROP PRIMARY KEY;
